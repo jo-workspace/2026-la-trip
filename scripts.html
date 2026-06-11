@@ -330,26 +330,28 @@
       currentFilterGroup = '全部';
      
       validTabs.forEach(key => {
-        // 1. 手機板底部導覽列樣式切換 (Pill 展開動畫)
+        // 1. 手機板底部導覽列樣式切換 (精緻淺色：寬度不變、文字不擠壓)
         const el = document.getElementById(`tab-${key}`);
         if (el) {
           const textSpan = el.querySelector('span:last-child');
           
           if (key === tab) {
-            el.className = "flex items-center justify-center py-1.5 px-3.5 bg-white text-[#2c3e4c] font-bold rounded-full transition-all duration-300 active:scale-95 cursor-pointer shadow-xs";
+            // 已選中：完美的 flex-1 寬度不變，僅加上柔和的微發光淺灰色背景
+            el.className = "flex items-center justify-center flex-1 h-full py-2 bg-[#5a7384]/12 text-[#2c3e4c] font-bold rounded-xl transition-all duration-200 cursor-pointer";
             if (textSpan) {
               textSpan.classList.remove('hidden');
-              textSpan.className = "text-xs font-bold tracking-wider ml-1.5";
+              textSpan.className = "text-xs font-extrabold tracking-wider ml-1.5 text-[#2c3e4c]";
             }
           } else {
-            el.className = "flex items-center justify-center py-2 px-3.5 text-[#ecf0f3] hover:text-white transition-all duration-300 rounded-full active:scale-95 cursor-pointer";
+            // 未選中：保持乾淨透亮，圖標微微淡化
+            el.className = "flex items-center justify-center flex-1 h-full py-2 text-slate-400 hover:text-slate-600 transition-all duration-200 cursor-pointer";
             if (textSpan) {
               textSpan.classList.add('hidden');
             }
           }
         }
         
-        // 2. 電腦版左側邊欄樣式切換
+        // 2. 電腦版左側邊欄樣式切換 (保持原樣不變)
         const sidebarEl = document.getElementById(`sidebar-tab-${key}`);
         if (sidebarEl) {
           if (key === tab) {
