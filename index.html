@@ -208,23 +208,23 @@
     
     <!-- 縱向選單 -->
     <div class="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
-      <button id="sidebar-tab-itinerary" onclick="switchTab('itinerary')" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-white bg-[#495e6d] font-semibold border-l-4 border-white pl-3 cursor-pointer">
+      <button id="sidebar-tab-itinerary" onclick="switchTab('itinerary')" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-[#2c3e4c] bg-white font-semibold border-l-4 border-[#3a4b53] pl-3 cursor-pointer">
         <span class="text-lg">🗓️</span>
         <span class="text-sm font-semibold tracking-wide">行程</span>
       </button>
-      <button id="sidebar-tab-todo" onclick="switchTab('todo')" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-[#c4d1da] hover:text-white hover:bg-[#495e6d]/40 font-medium border-l-4 border-transparent cursor-pointer">
+      <button id="sidebar-tab-todo" onclick="switchTab('todo')" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-[#ecf0f3] hover:text-white hover:bg-[#495e6d]/40 font-medium border-l-4 border-transparent cursor-pointer">
         <span class="text-lg">✅</span>
         <span class="text-sm font-semibold tracking-wide">待辦</span>
       </button>
-      <button id="sidebar-tab-packing" onclick="switchTab('packing')" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-[#c4d1da] hover:text-white hover:bg-[#495e6d]/40 font-medium border-l-4 border-transparent cursor-pointer">
+      <button id="sidebar-tab-packing" onclick="switchTab('packing')" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-[#ecf0f3] hover:text-white hover:bg-[#495e6d]/40 font-medium border-l-4 border-transparent cursor-pointer">
         <span class="text-lg">🧳</span>
         <span class="text-sm font-semibold tracking-wide">打包</span>
       </button>
-      <button id="sidebar-tab-expenses" onclick="switchTab('expenses')" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-[#c4d1da] hover:text-white hover:bg-[#495e6d]/40 font-medium border-l-4 border-transparent cursor-pointer">
+      <button id="sidebar-tab-expenses" onclick="switchTab('expenses')" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-[#ecf0f3] hover:text-white hover:bg-[#495e6d]/40 font-medium border-l-4 border-transparent cursor-pointer">
         <span class="text-lg">💵</span>
         <span class="text-sm font-semibold tracking-wide">記帳</span>
       </button>
-      <button id="sidebar-tab-shopping" onclick="switchTab('shopping')" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-[#c4d1da] hover:text-white hover:bg-[#495e6d]/40 font-medium border-l-4 border-transparent cursor-pointer">
+      <button id="sidebar-tab-shopping" onclick="switchTab('shopping')" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-[#ecf0f3] hover:text-white hover:bg-[#495e6d]/40 font-medium border-l-4 border-transparent cursor-pointer">
         <span class="text-lg">🛒</span>
         <span class="text-sm font-semibold tracking-wide">購物</span>
       </button>
@@ -492,23 +492,23 @@
   
   <!-- 手機板底部導覽列 (Bottom Navigation Bar) -->
   <nav class="fixed bottom-0 left-0 right-0 bg-[#5a7384] border-t border-[#495e6d] z-40 pb-[safe-area-inset-bottom] shadow-lg flex justify-around items-center h-16 px-4 select-none md:hidden">
-    <button id="tab-itinerary" onclick="switchTab('itinerary')" class="flex items-center justify-center py-1.5 px-3.5 bg-white/95 text-[#2c3e4c] font-bold rounded-full transition-all duration-300 active:scale-95 cursor-pointer shadow-xs">
+    <button id="tab-itinerary" onclick="switchTab('itinerary')" class="flex items-center justify-center py-1.5 px-3.5 bg-white text-[#2c3e4c] font-bold rounded-full transition-all duration-300 active:scale-95 cursor-pointer shadow-xs">
       <span class="text-lg">🗓️</span>
       <span class="text-xs font-bold tracking-wider ml-1.5">行程</span>
     </button>
-    <button id="tab-todo" onclick="switchTab('todo')" class="flex items-center justify-center py-2 px-3.5 text-[#c4d1da] hover:text-white transition-all duration-300 rounded-full active:scale-95 cursor-pointer">
+    <button id="tab-todo" onclick="switchTab('todo')" class="flex items-center justify-center py-2 px-3.5 text-[#ecf0f3] hover:text-white transition-all duration-300 rounded-full active:scale-95 cursor-pointer">
       <span class="text-lg">✅</span>
       <span class="text-xs font-semibold tracking-wider ml-1.5 hidden">待辦</span>
     </button>
-    <button id="tab-packing" onclick="switchTab('packing')" class="flex items-center justify-center py-2 px-3.5 text-[#c4d1da] hover:text-white transition-all duration-300 rounded-full active:scale-95 cursor-pointer">
+    <button id="tab-packing" onclick="switchTab('packing')" class="flex items-center justify-center py-2 px-3.5 text-[#ecf0f3] hover:text-white transition-all duration-300 rounded-full active:scale-95 cursor-pointer">
       <span class="text-lg">🧳</span>
       <span class="text-xs font-semibold tracking-wider ml-1.5 hidden">打包</span>
     </button>
-    <button id="tab-expenses" onclick="switchTab('expenses')" class="flex items-center justify-center py-2 px-3.5 text-[#c4d1da] hover:text-white transition-all duration-300 rounded-full active:scale-95 cursor-pointer">
+    <button id="tab-expenses" onclick="switchTab('expenses')" class="flex items-center justify-center py-2 px-3.5 text-[#ecf0f3] hover:text-white transition-all duration-300 rounded-full active:scale-95 cursor-pointer">
       <span class="text-lg">💵</span>
       <span class="text-xs font-semibold tracking-wider ml-1.5 hidden">記帳</span>
     </button>
-    <button id="tab-shopping" onclick="switchTab('shopping')" class="flex items-center justify-center py-2 px-3.5 text-[#c4d1da] hover:text-white transition-all duration-300 rounded-full active:scale-95 cursor-pointer">
+    <button id="tab-shopping" onclick="switchTab('shopping')" class="flex items-center justify-center py-2 px-3.5 text-[#ecf0f3] hover:text-white transition-all duration-300 rounded-full active:scale-95 cursor-pointer">
       <span class="text-lg">🛒</span>
       <span class="text-xs font-semibold tracking-wider ml-1.5 hidden">購物</span>
     </button>
