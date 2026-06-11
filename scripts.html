@@ -657,24 +657,6 @@
       if (packingData.length === 0) { container.innerHTML = '<div class="text-center py-12 text-slate-400 text-sm">目前沒有打包清單</div>'; return; }
       container.innerHTML = '';
       
-      const packingEmojis = {
-        '衣物': '👕',
-        '盥洗': '🧴',
-        '3C': '💻',
-        '電子': '💻',
-        '電器': '💻',
-        '藥': '💊',
-        '文件': '📄',
-        '隨身': '👜',
-        '鞋': '👟',
-        '化妝': '💄',
-        '裝備': '⚙️',
-        '生活': '🧼',
-        '機票': '✈️',
-        '簽證': '🛂',
-        '保險': '🛡️'
-      };
-
       // 1. 過濾與分組資料
       let grouped = {};
       packingData.forEach(item => {
@@ -701,24 +683,18 @@
         
         const allItemsPacked = grouped[cat].every(item => item.isPacked);
         
-        // 根據類別關鍵字決定 emoji，否則不顯示 emoji
-        let emoji = '';
-        for (let key in packingEmojis) {
-          if (cat.includes(key)) {
-            emoji = packingEmojis[key] + ' ';
-            break;
-          }
-        }
-
         const card = document.createElement('div');
         card.className = allItemsPacked 
           ? "bg-slate-55 border border-slate-100 rounded-2xl p-4.5 mb-4 shadow-none opacity-80 transition-all duration-300"
           : "bg-white border border-slate-100/80 rounded-2xl p-4.5 mb-4 shadow-3xs hover:shadow-2xs transition-all duration-300";
         
         let headerHtml = `
-          <div class="mb-3.5 select-none flex justify-between items-center">
-            <div class="text-xs font-black uppercase tracking-wider text-slate-400 bg-slate-100 px-2 py-1 rounded inline-block">
-              <span>${emoji}${cat}</span>
+          <div class="text-sm font-black border-b border-slate-100 pb-2.5 mb-2 flex justify-between items-center select-none ${
+            allItemsPacked ? 'text-slate-400' : 'text-slate-900'
+          }">
+            <div class="flex items-center">
+              ${allItemsPacked ? '<span class="text-emerald-500 mr-1.5 font-bold">✓</span>' : ''}
+              <span>📦 ${cat}</span>
             </div>
             ${allItemsPacked ? '<span class="text-[10px] font-extrabold text-[#3a5240] bg-emerald-50/50 px-2 py-0.5 rounded-md">ALL PACKED</span>' : ''}
           </div>
@@ -734,7 +710,7 @@
               let colorClass = "bg-emerald-55/60 text-emerald-750 border border-emerald-100/50";
               if (p === 'Jo') colorClass = "bg-indigo-50/70 text-indigo-650 border border-indigo-100/50";
               else if (p === 'Will') colorClass = "bg-slate-100 text-slate-650 border border-slate-200/50";
-              badgesHtml += `<span class="inline-block text-[9px] font-bold ${colorClass} px-1.5 py-0.5 rounded ml-1.5 tracking-wider leading-none select-none">${p}</span>`;
+              badgesHtml += `<span class="inline-block text-[9px] font-bold ${colorClass} px-1.5 py-0.2 rounded ml-1.5 tracking-wide">${p}</span>`;
             });
           }
           
@@ -744,96 +720,129 @@
                 <input type="checkbox" ${item.isPacked ? 'checked' : ''} onclick="togglePackingArchive(${item.rowIndex}, this)" class="w-5 h-5 rounded border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer flex-shrink-0 transition-transform duration-100 active:scale-90">
                 <div class="min-w-0 flex-1">
                   <div class="flex items-center flex-wrap gap-y-0.5">
-                    <span class="packing-title text-sm font-semibold text-slate-800 leading-tight ${item.isPacked ? 'line-through text-slate-400' : ''}">${item.item}</span>
+                    <span class="packing-title text-base font-extrabold text-slate-955 leading-tight ${item.isPacked ? 'line-through text-slate-400' : ''}">${item.item}</span>
                     ${badgesHtml}
                   </div>
-                  ${item.note ? `<p class="text-xs text-slate-400 mt-0.5 font-medium leading-relaxed">${item.note}</p>` : ''}
+                  ${item.note ? `<p class="text-sm text-slate-500 font-medium mt-1 leading-relaxed">${item.note}</p>` : ''}
                 </div>
               </div>
               <button onclick="openPackingModal(${item.rowIndex})" class="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all flex items-center justify-center cursor-pointer active:scale-90 flex-shrink-0" title="編輯">
                 <span class="text-2xs leading-none select-none">✎</span>
               </button>
             </div>
-          `;      // 建立頂部區塊容器 (包含看板和記帳面板)
-      const topSection = document.createElement('div');
-      topSection.className = "flex flex-col md:block min-h-[calc(100dvh-175px-env(safe-area-inset-bottom,0px))] md:min-h-0 mb-4 justify-between";
+          `;
+        });
+        itemsHtml += '</div>';
+        
+        card.innerHTML = headerHtml + itemsHtml;
+        container.appendChild(card);
+      });
+    }
+
+    // === 4. 記帳頁面 ===
+    function renderExpenses() {
+      const container = document.getElementById('mainContainer'); 
+      container.innerHTML = '';
+      let totalTWD = 0, joPaidTWD = 0, willPaidTWD = 0, joShareTWD = 0, willShareTWD = 0;
+
+      expensesData.forEach(exp => {
+        let amt = parseFloat(exp.amount);
+        if (isNaN(amt)) amt = 0;
+        let amtTWD = exp.currency === 'USD' ? amt * fxRate : amt; 
+        totalTWD += amtTWD;
+        if (exp.paidBy === 'Jo') joPaidTWD += amtTWD; 
+        if (exp.paidBy === 'Will') willPaidTWD += amtTWD;
+        
+        if (exp.split === 'Jo') {
+          joShareTWD += amtTWD; 
+        } else if (exp.split === 'Will') {
+          willShareTWD += amtTWD; 
+        } else { 
+          joShareTWD += amtTWD / 2; 
+          willShareTWD += amtTWD / 2; 
+        }
+      });
+
+      let settlementText = "", joOverage = joPaidTWD - joShareTWD;
+      if (joOverage > 0) settlementText = `Will ➔ Jo $${Math.round(joOverage).toLocaleString()}`;
+      else if (joOverage < 0) settlementText = `Jo ➔ Will $${Math.round(Math.abs(joOverage)).toLocaleString()}`;
+      else settlementText = "兩不相欠";
 
       // 記帳資訊看板 - 三卡合一列
       const dashboard = document.createElement('div');
       dashboard.className = "grid grid-cols-3 gap-2.5 mb-4 text-center";
       dashboard.innerHTML = `
-        <div class="bg-[#5a7384] text-white py-4 px-3.5 rounded-2xl flex flex-col justify-center items-center shadow-3xs select-none">
-          <span class="text-[10px] font-black uppercase tracking-wider text-slate-200">分帳結餘</span>
-          <span class="text-sm font-extrabold mt-1 tracking-tight">${settlementText}</span>
+        <div class="bg-[#5a7384] text-white p-2.5 rounded-xl flex flex-col justify-center items-center shadow-3xs select-none">
+          <span class="text-[10px] font-bold text-slate-200">分帳結餘</span>
+          <span class="text-xs font-extrabold mt-0.5 tracking-tight">${settlementText}</span>
         </div>
-        <div class="bg-white border border-slate-100 py-4 px-3.5 rounded-2xl flex flex-col justify-center items-center shadow-3xs">
-          <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Jo 總花費</span>
-          <span class="text-sm font-mono font-black text-slate-800 mt-1">$${Math.round(joShareTWD).toLocaleString()}</span>
+        <div class="bg-white border border-slate-100 p-2.5 rounded-xl flex flex-col justify-center items-center shadow-3xs">
+          <span class="text-[10px] font-bold text-slate-400">Jo 總花費</span>
+          <span class="text-xs font-mono font-black text-slate-805 mt-0.5">$${Math.round(joShareTWD).toLocaleString()}</span>
         </div>
-        <div class="bg-white border border-slate-100 py-4 px-3.5 rounded-2xl flex flex-col justify-center items-center shadow-3xs">
-          <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Will 總花費</span>
-          <span class="text-sm font-mono font-black text-slate-800 mt-1">$${Math.round(willShareTWD).toLocaleString()}</span>
+        <div class="bg-white border border-slate-100 p-2.5 rounded-xl flex flex-col justify-center items-center shadow-3xs">
+          <span class="text-[10px] font-bold text-slate-400">Will 總花費</span>
+          <span class="text-xs font-mono font-black text-slate-805 mt-0.5">$${Math.round(willShareTWD).toLocaleString()}</span>
         </div>
       `;
-      topSection.appendChild(dashboard);
+      container.appendChild(dashboard);
 
-      // 快速記帳面板 (莫蘭迪粉綠 bg-[#5c6e5c])
+      // 快速記帳面板 (莫蘭迪粉綠 bg-[#5c6e5c]，超緊湊)
       const formCard = document.createElement('div');
-      formCard.className = "bg-[#5c6e5c] text-slate-100 p-5 rounded-2xl mb-2 shadow-md border border-[#4d5e4d]/40";
+      formCard.className = "bg-[#5c6e5c] text-slate-100 p-4 rounded-2xl mb-6 shadow-md border border-[#4d5e4d]/40";
       formCard.innerHTML = `
-        <div class="space-y-4 text-slate-900">
+        <div class="space-y-3 text-slate-900">
           <!-- 行 1: 品項 + 金額與幣別單鍵切換 -->
-          <div class="grid grid-cols-5 gap-2.5">
-            <input type="text" id="exp-item" placeholder="品項名稱 (如: 麥當勞)" class="col-span-3 bg-white/95 text-slate-800 text-sm font-semibold px-3.5 py-2.5 rounded-xl focus:ring-2 focus:ring-slate-300 outline-none transition-all">
+          <div class="grid grid-cols-5 gap-2">
+            <input type="text" id="exp-item" placeholder="品項名稱 (如: 麥當勞)" class="col-span-3 bg-white/95 text-slate-800 text-xs font-semibold px-3 py-2 rounded-xl focus:ring-2 focus:ring-slate-300 outline-none transition-all">
             <div class="col-span-2 relative flex items-center">
-              <input type="number" id="exp-amount" placeholder="金額" step="any" oninput="updateLiveExchange(this.value)" class="w-full bg-white/95 text-slate-800 text-sm font-bold pl-3.5 pr-12.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-300 transition-all">
-              <button onclick="toggleFormCurrencyShort()" id="curr-toggle" type="button" class="absolute right-1.5 text-[10px] font-black bg-[#4d5e4d] text-white px-2 py-1 rounded-lg cursor-pointer select-none active:scale-95 transition-all">USD</button>
+              <input type="number" id="exp-amount" placeholder="金額" step="any" oninput="updateLiveExchange(this.value)" class="w-full bg-white/95 text-slate-800 text-xs font-bold pl-3 pr-11 py-2 rounded-xl outline-none focus:ring-2 focus:ring-slate-300 transition-all">
+              <button onclick="toggleFormCurrencyShort()" id="curr-toggle" type="button" class="absolute right-1 text-[10px] font-black bg-[#4d5e4d] text-white px-2 py-1 rounded-lg cursor-pointer select-none active:scale-95 transition-all">USD</button>
             </div>
           </div>
           <div id="live-calc" class="text-2xs font-extrabold text-amber-200 px-1 hidden transition-all">約合 TWD $0</div>
           
           <!-- 行 2: 分類 (Emoji 按鈕，無標題) -->
-          <div class="flex items-center space-x-2 overflow-x-auto no-scrollbar py-0.5">
-            <div onclick="setFormCategory('🍔')" id="formcat-🍔" class="w-9.5 h-9.5 flex items-center justify-center bg-[#4d5e4d]/50 text-slate-200 text-base rounded-xl cursor-pointer select-none active:scale-90 transition-all" title="美食">🍔</div>
-            <div onclick="setFormCategory('🛒')" id="formcat-🛒" class="w-9.5 h-9.5 flex items-center justify-center bg-[#4d5e4d]/50 text-slate-200 text-base rounded-xl cursor-pointer select-none active:scale-90 transition-all" title="購物">🛒</div>
-            <div onclick="setFormCategory('🚗')" id="formcat-🚗" class="w-9.5 h-9.5 flex items-center justify-center bg-[#4d5e4d]/50 text-slate-200 text-base rounded-xl cursor-pointer select-none active:scale-90 transition-all" title="交通">🚗</div>
-            <div onclick="setFormCategory('⚾')" id="formcat-⚾" class="w-9.5 h-9.5 flex items-center justify-center bg-[#4d5e4d]/50 text-slate-200 text-base rounded-xl cursor-pointer select-none active:scale-90 transition-all" title="球場">⚾</div>
-            <div onclick="setFormCategory('🏨')" id="formcat-🏨" class="w-9.5 h-9.5 flex items-center justify-center bg-[#4d5e4d]/50 text-slate-200 text-base rounded-xl cursor-pointer select-none active:scale-90 transition-all" title="住宿">🏨</div>
-            <div onclick="setFormCategory('其他')" id="formcat-其他" class="px-3.5 h-9.5 flex items-center justify-center bg-[#4d5e4d]/50 text-slate-200 text-xs rounded-xl font-bold cursor-pointer select-none active:scale-90 transition-all">其他</div>
+          <div class="flex items-center space-x-1.5 overflow-x-auto no-scrollbar py-0.5">
+            <div onclick="setFormCategory('🍔')" id="formcat-🍔" class="w-8.5 h-8.5 flex items-center justify-center bg-[#4d5e4d]/50 text-slate-200 text-sm rounded-xl cursor-pointer select-none active:scale-90 transition-all" title="美食">🍔</div>
+            <div onclick="setFormCategory('🛒')" id="formcat-🛒" class="w-8.5 h-8.5 flex items-center justify-center bg-[#4d5e4d]/50 text-slate-200 text-sm rounded-xl cursor-pointer select-none active:scale-90 transition-all" title="購物">🛒</div>
+            <div onclick="setFormCategory('🚗')" id="formcat-🚗" class="w-8.5 h-8.5 flex items-center justify-center bg-[#4d5e4d]/50 text-slate-200 text-sm rounded-xl cursor-pointer select-none active:scale-90 transition-all" title="交通">🚗</div>
+            <div onclick="setFormCategory('⚾')" id="formcat-⚾" class="w-8.5 h-8.5 flex items-center justify-center bg-[#4d5e4d]/50 text-slate-200 text-sm rounded-xl cursor-pointer select-none active:scale-90 transition-all" title="球場">⚾</div>
+            <div onclick="setFormCategory('🏨')" id="formcat-🏨" class="w-8.5 h-8.5 flex items-center justify-center bg-[#4d5e4d]/50 text-slate-200 text-sm rounded-xl cursor-pointer select-none active:scale-90 transition-all" title="住宿">🏨</div>
+            <div onclick="setFormCategory('其他')" id="formcat-其他" class="px-2.5 h-8.5 flex items-center justify-center bg-[#4d5e4d]/50 text-slate-200 text-2xs rounded-xl font-bold cursor-pointer select-none active:scale-90 transition-all">其他</div>
           </div>
 
           <!-- 行 3: 付款人與分攤人 -->
-          <div class="grid grid-cols-2 gap-2.5">
+          <div class="grid grid-cols-2 gap-2">
             <!-- 付款人 -->
-            <div class="flex items-center space-x-1.5 bg-[#4d5e4d]/30 p-1 rounded-xl w-full text-[11px]">
+            <div class="flex items-center space-x-1.5 bg-[#4d5e4d]/30 p-1 rounded-xl w-full text-[10px]">
               <span class="text-slate-200 pl-1 font-bold">付:</span>
-              <div class="flex flex-1 p-0.5 rounded-lg text-[11px] font-extrabold bg-[#4d5e4d]/20">
-                <div onclick="setFormPaidBy('Jo')" id="paid-Jo" class="flex-1 text-center py-2 rounded-lg cursor-pointer select-none transition-all">Jo</div>
-                <div onclick="setFormPaidBy('Will')" id="paid-Will" class="flex-1 text-center py-2 rounded-lg cursor-pointer select-none transition-all">Will</div>
+              <div class="flex flex-1 p-0.5 rounded-lg text-2xs font-extrabold bg-[#4d5e4d]/20">
+                <div onclick="setFormPaidBy('Jo')" id="paid-Jo" class="flex-1 text-center py-1 rounded cursor-pointer select-none transition-all">Jo</div>
+                <div onclick="setFormPaidBy('Will')" id="paid-Will" class="flex-1 text-center py-1 rounded cursor-pointer select-none transition-all">Will</div>
               </div>
             </div>
             <!-- 分攤人 -->
-            <div class="flex items-center space-x-1.5 bg-[#4d5e4d]/30 p-1 rounded-xl w-full text-[11px]">
+            <div class="flex items-center space-x-1.5 bg-[#4d5e4d]/30 p-1 rounded-xl w-full text-[10px]">
               <span class="text-slate-200 pl-1 font-bold">攤:</span>
-              <div class="flex flex-1 p-0.5 rounded-lg text-[11px] font-extrabold bg-[#4d5e4d]/20">
-                <div onclick="setFormSplit('公用')" id="split-公用" class="flex-1 text-center py-2 rounded-lg cursor-pointer select-none transition-all font-semibold">公用</div>
-                <div onclick="setFormSplit('Jo')" id="split-Jo" class="flex-1 text-center py-2 rounded-lg cursor-pointer select-none transition-all">Jo</div>
-                <div onclick="setFormSplit('Will')" id="split-Will" class="flex-1 text-center py-2 rounded-lg cursor-pointer select-none transition-all">Will</div>
+              <div class="flex flex-1 p-0.5 rounded-lg text-2xs font-extrabold bg-[#4d5e4d]/20">
+                <div onclick="setFormSplit('公用')" id="split-公用" class="flex-1 text-center py-1 rounded cursor-pointer select-none transition-all font-semibold">公用</div>
+                <div onclick="setFormSplit('Jo')" id="split-Jo" class="flex-1 text-center py-1 rounded cursor-pointer select-none transition-all">Jo</div>
+                <div onclick="setFormSplit('Will')" id="split-Will" class="flex-1 text-center py-1 rounded cursor-pointer select-none transition-all">Will</div>
               </div>
             </div>
           </div>
 
           <!-- 行 4: 備註說明 -->
           <div>
-            <input type="text" id="exp-note" placeholder="備註 (選填)" class="w-full bg-white/95 text-slate-800 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-300 transition-all">
+            <input type="text" id="exp-note" placeholder="備註 (選填)" class="w-full bg-white/95 text-slate-800 text-xs px-3 py-2 rounded-xl outline-none focus:ring-2 focus:ring-slate-300 transition-all">
           </div>
 
           <!-- 行 5: 送出按鈕 -->
-          <button onclick="submitExpenseForm()" id="submitExpBtn" class="w-full bg-white hover:bg-slate-50 active:scale-98 text-[#2c3a2c] font-black text-sm py-3 rounded-xl tracking-wider uppercase text-center cursor-pointer select-none transition-all shadow-xs">送出記帳</button>
+          <button onclick="submitExpenseForm()" id="submitExpBtn" class="w-full bg-white hover:bg-slate-50 active:scale-98 text-[#2c3a2c] font-black text-sm py-2 rounded-xl tracking-wider uppercase text-center cursor-pointer select-none transition-all shadow-xs">送出記帳</button>
         </div>
       `;
-      topSection.appendChild(formCard);
-      container.appendChild(topSection);
+      container.appendChild(formCard);
 
       setFormCategory(selectedFormCategory); 
       toggleFormCurrency(selectedFormCurrency); 
@@ -905,12 +914,12 @@
         if (el) {
           if (c === cat) {
             el.className = c === '其他' 
-              ? "px-3.5 h-9.5 flex items-center justify-center bg-white text-[#2c3a2c] text-xs rounded-xl font-black cursor-pointer select-none scale-105 shadow-2xs border-0 transition-all"
-              : "w-9.5 h-9.5 flex items-center justify-center bg-white text-slate-800 text-base rounded-xl font-black cursor-pointer select-none scale-105 shadow-2xs border-0 transition-all";
+              ? "px-2.5 h-8.5 flex items-center justify-center bg-white text-[#2c3a2c] text-2xs rounded-xl font-black cursor-pointer select-none scale-105 shadow-2xs border-0"
+              : "w-8.5 h-8.5 flex items-center justify-center bg-white text-slate-800 text-sm rounded-xl font-black cursor-pointer select-none scale-105 shadow-2xs border-0";
           } else {
             el.className = c === '其他'
-              ? "px-3.5 h-9.5 flex items-center justify-center bg-[#4d5e4d]/50 text-[#ecf3ec] text-xs rounded-xl font-bold cursor-pointer select-none hover:text-white hover:bg-[#4d5e4d] transition-all"
-              : "w-9.5 h-9.5 flex items-center justify-center bg-[#4d5e4d]/50 text-[#ecf3ec] text-base rounded-xl cursor-pointer select-none hover:text-white hover:bg-[#4d5e4d] transition-all";
+              ? "px-2.5 h-8.5 flex items-center justify-center bg-[#4d5e4d]/50 text-[#ecf3ec] text-2xs rounded-xl font-bold cursor-pointer select-none hover:text-white hover:bg-[#4d5e4d]"
+              : "w-8.5 h-8.5 flex items-center justify-center bg-[#4d5e4d]/50 text-[#ecf3ec] text-sm rounded-xl cursor-pointer select-none hover:text-white hover:bg-[#4d5e4d]";
           }
         }
       });
@@ -937,11 +946,11 @@
       const willEl = document.getElementById('paid-Will');
       if(joEl && willEl) {
         if (person === 'Jo') {
-          joEl.className = "flex-1 text-center py-2 bg-white text-[#2c3a2c] rounded-lg cursor-pointer select-none transition-all font-black shadow-3xs";
-          willEl.className = "flex-1 text-center py-2 text-[#ecf3ec] rounded-lg cursor-pointer select-none transition-all hover:text-white";
+          joEl.className = "flex-1 text-center py-1 bg-white text-[#2c3a2c] rounded cursor-pointer select-none transition-all font-black shadow-3xs";
+          willEl.className = "flex-1 text-center py-1 text-[#ecf3ec] rounded cursor-pointer select-none transition-all hover:text-white";
         } else {
-          joEl.className = "flex-1 text-center py-2 text-[#ecf3ec] rounded-lg cursor-pointer select-none transition-all hover:text-white";
-          willEl.className = "flex-1 text-center py-2 bg-white text-[#2c3a2c] rounded-lg cursor-pointer select-none transition-all font-black shadow-3xs";
+          joEl.className = "flex-1 text-center py-1 text-[#ecf3ec] rounded cursor-pointer select-none transition-all hover:text-white";
+          willEl.className = "flex-1 text-center py-1 bg-white text-[#2c3a2c] rounded cursor-pointer select-none transition-all font-black shadow-3xs";
         }
       }
     }
@@ -954,9 +963,9 @@
         const el = document.getElementById('split-' + p);
         if (el) {
           if (p === type) {
-            el.className = "flex-1 text-center py-2 bg-white text-[#2c3a2c] rounded-lg cursor-pointer select-none transition-all font-black shadow-3xs";
+            el.className = "flex-1 text-center py-1 bg-white text-[#2c3a2c] rounded cursor-pointer select-none transition-all font-black shadow-3xs";
           } else {
-            el.className = "flex-1 text-center py-2 text-[#ecf3ec] rounded-lg cursor-pointer select-none transition-all hover:text-white";
+            el.className = "flex-1 text-center py-1 text-[#ecf3ec] rounded cursor-pointer select-none transition-all hover:text-white";
           }
         }
       });
