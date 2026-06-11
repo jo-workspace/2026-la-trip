@@ -330,21 +330,21 @@
       currentFilterGroup = '全部';
      
       validTabs.forEach(key => {
-        // 1. 手機板底部導覽列樣式切換 (精緻淺色：寬度不變、文字不擠壓)
+        // 1. 手機板底部導覽列樣式切換 (方形 Tabs：寬度不變、微小圓角)
         const el = document.getElementById(`tab-${key}`);
         if (el) {
           const textSpan = el.querySelector('span:last-child');
           
           if (key === tab) {
-            // 已選中：完美的 flex-1 寬度不變，僅加上柔和的微發光淺灰色背景
-            el.className = "flex items-center justify-center flex-1 h-full py-2 bg-[#5a7384]/12 text-[#2c3e4c] font-bold rounded-xl transition-all duration-200 cursor-pointer";
+            // 已選中：完美的 flex-1 寬度不變，方形背景僅帶極微小圓角 (rounded)
+            el.className = "flex items-center justify-center flex-1 h-full py-2.5 bg-[#5a7384]/8 text-[#2c3e4c] font-bold rounded transition-all duration-200 cursor-pointer mx-0.5";
             if (textSpan) {
               textSpan.classList.remove('hidden');
-              textSpan.className = "text-xs font-extrabold tracking-wider ml-1.5 text-[#2c3e4c]";
+              textSpan.className = "text-xs font-extrabold tracking-wider ml-1 text-[#2c3e4c]";
             }
           } else {
             // 未選中：保持乾淨透亮，圖標微微淡化
-            el.className = "flex items-center justify-center flex-1 h-full py-2 text-slate-400 hover:text-slate-600 transition-all duration-200 cursor-pointer";
+            el.className = "flex items-center justify-center flex-1 h-full py-2.5 text-slate-400 hover:text-slate-600 transition-all duration-200 cursor-pointer mx-0.5";
             if (textSpan) {
               textSpan.classList.add('hidden');
             }
