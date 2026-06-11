@@ -783,8 +783,8 @@
       });
 
       let settlementText = "", joOverage = joPaidTWD - joShareTWD;
-      if (joOverage > 0) settlementText = `Will ➔ Jo $${Math.round(joOverage).toLocaleString()}`;
-      else if (joOverage < 0) settlementText = `Jo ➔ Will $${Math.round(Math.abs(joOverage)).toLocaleString()}`;
+      if (joOverage > 0) settlementText = `Will 應給 Jo $${Math.round(joOverage).toLocaleString()}`;
+      else if (joOverage < 0) settlementText = `Jo 應給 Will $${Math.round(Math.abs(joOverage)).toLocaleString()}`;
       else settlementText = "兩不相欠";
 
       // 記帳資訊看板 - 三卡合一列
@@ -792,7 +792,6 @@
       dashboard.className = "grid grid-cols-3 gap-2.5 mb-4 text-center";
       dashboard.innerHTML = `
         <div class="bg-[#5a7384] text-white py-4 px-3.5 rounded-2xl flex flex-col justify-center items-center shadow-3xs select-none">
-          <span class="text-[10px] font-black uppercase tracking-wider text-slate-200">分帳結餘</span>
           <span class="text-sm font-extrabold mt-1 tracking-tight">${settlementText}</span>
         </div>
         <div class="bg-white border border-slate-100 py-4 px-3.5 rounded-2xl flex flex-col justify-center items-center shadow-3xs">
