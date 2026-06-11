@@ -45,16 +45,8 @@
                 // 否則，即為執行後端 Apps Script 的函數
                 return function(...args) {
                   const token = localStorage.getItem('la_trip_api_token') || '';
-                  const scriptUrl = localStorage.getItem('la_trip_api_url') || '';
-                  
-                  if (!scriptUrl) {
-                    const errMsg = "請點擊右上角 ⚙️ 設定按鈕配置 Google Apps Script API 網址與 Token。";
-                    console.warn(errMsg);
-                    if (failureCb) {
-                      failureCb(new Error(errMsg));
-                    }
-                    return;
-                  }
+                  const defaultUrl = "https://script.google.com/macros/s/AKfycbwuT0HjqVqIpY9fO-zHC9xuG_U6et5AsYE9qkhR8_PqvLG3vTWdxRGERLbeEXzo4iUQ/exec";
+                  const scriptUrl = localStorage.getItem('la_trip_api_url') || defaultUrl;
 
                   const requestBody = {
                     action: propKey,
@@ -142,14 +134,7 @@
       }
     }
 
-    // 初次載入引導
-    document.addEventListener("DOMContentLoaded", () => {
-      if (!localStorage.getItem('la_trip_api_url')) {
-        setTimeout(() => {
-          openSettingsPrompt();
-        }, 800);
-      }
-    });
+    // 初次載入無須彈出引導，直接使用預設連結載入資料
   </script>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased pb-16">
