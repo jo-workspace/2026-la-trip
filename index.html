@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>202608 LA 旅遊助手</title>
+  
+  <!-- 引入優質字型 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  
+  <script>
+    // 🎨 0. 動態載入樣式
+    fetch('styles.html?v=2.0')
+      .then(r => r.text())
+      .then(data => {
+        const styleDiv = document.createElement('div');
+        styleDiv.innerHTML = data;
+        document.head.appendChild(styleDiv);
+      })
+      .catch(err => console.error("載入樣式失敗:", err));
+
+    // 🧙‍♂️ 1. 建立萬能全局攔截器，模擬 Google Apps Script 執行環境
+    window.google = {
+      script: {
+        run: (function() {
+          function createRunner(successCb, failureCb) {
+            return new Proxy({}, {
+              get(target, propKey) {
+                // 如果是設定回調函數
+                if (propKey === 'withSuccessHandler') {
+                  return function(cb) {
+                    return createRunner(cb, failureCb);
+                  };
+                }
+                if (propKey === 'withFailureHandler') {
+                  return function(cb) {
+                    return createRunner(successCb, cb);
+                  };
+                }
+                
+                // 否則，即為執行後端 Apps Script 的函數
+                return function(...args) {
+                  const token = localStorage.getItem('la_trip_api_token') || '';
+                  const scriptUrl = localStorage.getItem('la_trip_api_url') || '';
+                  
+                  if (!scriptUrl) {
+                    const errMsg = "請點擊右上角 ⚙️ 設定按鈕配置 Google Apps Script API 網址與 Token。";
+                    console.warn(errMsg);
+                    if (failureCb) {
+                      failureCb(new Error(errMsg));
+                    }
+                    return;
+                  }
+
+                  const requestBody = {
+                    action: propKey,
+                    token: token,
+                    args: args
+                  };
+
+                  fetch(scriptUrl, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(requestBody)
+                  })
+                  .then(res => res.json())
+                  .then(res => {
+                    if (res && (res.error || res.status === 'error')) {
+                      if (failureCb) {
+                        failureCb(new Error(res.error || "API 執行失敗"));
+                      } else {
+                        console.error("API error:", res.error);
+                      }
+                    } else {
+                      if (successCb) {
+                        // 支援有包裝 `{ success: true, result: ... }` 或無包裝的 JSON 物件
+                        const output = (res && res.result !== undefined) ? res.result : res;
+                        successCb(output);
+                      }
+                    }
+                  })
+                  .catch(err => {
+                    if (failureCb) {
+                      failureCb(err);
+                    } else {
+                      console.error("Network error:", err);
+                    }
+                  });
+                };
+              }
+            });
+          }
+          return createRunner(null, null);
+        })()
+      }
+    };
+
+    // ⚙️ API 設定 Prompt
+    function openSettingsPrompt() {
+      const currentUrl = localStorage.getItem('la_trip_api_url') || '';
+      const currentToken = localStorage.getItem('la_trip_api_token') || '';
+      
+      const newUrl = prompt("請輸入 Google Apps Script Web App 網址：\n(如：https://script.google.com/macros/s/.../exec)", currentUrl);
+      if (newUrl !== null) {
+        localStorage.setItem('la_trip_api_url', newUrl.trim());
+        
+        const newToken = prompt("請輸入認證金鑰 (API Token / 暗號)：\n(若無設定請留空)", currentToken);
+        if (newToken !== null) {
+          localStorage.setItem('la_trip_api_token', newToken.trim());
+          
+          if (typeof showToast === 'function') {
+            showToast("API 設定已儲存，正在重新載入資料...");
+          } else {
+            alert("API 設定已儲存，正在重新載入資料...");
+          }
+          
+          if (typeof handleRefresh === 'function') {
+            handleRefresh();
+          } else {
+            location.reload();
+          }
+        }
+      }
+    }
+
+    // 初次載入引導
+    document.addEventListener("DOMContentLoaded", () => {
+      if (!localStorage.getItem('la_trip_api_url')) {
+        setTimeout(() => {
+          openSettingsPrompt();
+        }, 800);
+      }
+    });
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased pb-16">
+
+  <!-- 頂部導覽列 -->
+  <header class="bg-white/80 backdrop-blur-md border-b border-slate-100 sticky top-0 z-40 px-3 py-3 shadow-xs flex justify-between items-center transition-all duration-200">
+    <div class="flex space-x-1.5 overflow-x-auto no-scrollbar py-0.5">
+      <button id="tab-itinerary" onclick="switchTab('itinerary')" class="px-3.5 py-1.5 text-sm font-bold bg-slate-900 text-white rounded-full transition-all duration-200 whitespace-nowrap shadow-xs active:scale-95">🗓️ 行程</button>
+      <button id="tab-todo" onclick="switchTab('todo')" class="px-3.5 py-1.5 text-sm font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-all duration-200 whitespace-nowrap active:scale-95">✅ 待辦</button>
+      <button id="tab-packing" onclick="switchTab('packing')" class="px-3.5 py-1.5 text-sm font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-all duration-200 whitespace-nowrap active:scale-95">🧳 打包</button>
+      <button id="tab-expenses" onclick="switchTab('expenses')" class="px-3.5 py-1.5 text-sm font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-all duration-200 whitespace-nowrap active:scale-95">💵 記帳</button>
+      <button id="tab-shopping" onclick="switchTab('shopping')" class="px-3.5 py-1.5 text-sm font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-all duration-200 whitespace-nowrap active:scale-95">🛒 購物</button>
+    </div>
+   
+    <div class="flex items-center space-x-1.5 flex-shrink-0 ml-2">
+      <!-- 重新整理按鈕 -->
+      <button id="refreshBtn" onclick="handleRefresh()" class="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-all duration-200 focus:outline-none active:scale-90" title="強製重新讀取資料">
+        <span id="refreshIcon" class="block text-base leading-none select-none">🔄</span>
+      </button>
+
+      <!-- API 設定按鈕 -->
+      <button id="settingsBtn" onclick="openSettingsPrompt()" class="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-all duration-200 focus:outline-none active:scale-90" title="API 設定">
+        <span class="block text-base leading-none select-none">⚙️</span>
+      </button>
+
+      <!-- 隱藏開關 -->
+      <label id="mainToggleContainer" class="flex items-center space-x-1 text-xs font-bold text-slate-500 bg-slate-100 hover:bg-slate-200/80 px-2.5 py-1.5 rounded-full cursor-pointer select-none transition-colors duration-150">
+        <input type="checkbox" id="hideVisitedToggle" checked class="w-3.5 h-3.5 rounded border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer">
+        <span id="toggleLabel" class="tracking-wider uppercase">隱藏去過</span>
+      </label>
+    </div>
+  </header>
+
+  <!-- 二級控制列 (分類與商店篩選) -->
+  <div id="subSubControl" class="bg-slate-100/50 backdrop-blur-xs px-4 py-2 border-b border-slate-200/60 hidden flex space-x-1.5 overflow-x-auto no-scrollbar flex-shrink-0"></div>
+
+  <!-- 主容器 -->
+  <main class="max-w-md mx-auto px-4 mt-4" id="mainContainer">
+    <!-- 預設顯示骨架屏 -->
+    <div id="skeletonContainer"></div>
+  </main>
+
+  <!-- Lightbox 燈箱 (優化縮放效果) -->
+  <div id="lightbox" onclick="closeLightbox()" class="hidden fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4 cursor-zoom-out transition-all duration-300">
+    <div class="relative max-w-full max-h-full flex items-center justify-center">
+      <img id="lightbox-img" src="" class="max-w-full max-h-[85vh] object-contain shadow-2xl rounded-lg" alt="Enlarged view">
+      <button onclick="event.stopPropagation(); closeLightbox();" class="absolute -top-12 right-0 text-white text-3xl font-light p-2 hover:opacity-80 active:scale-90 transition-transform">✕</button>
+    </div>
+  </div>
+
+  <!-- Toast 提示容器 -->
+  <div id="toastContainer" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 flex flex-col space-y-2 items-center pointer-events-none"></div>
+
+  <script>
+    // 📦 4. 動態載入核心腳本
+    fetch('scripts.html?v=2.0')
+      .then(r => r.text())
+      .then(htmlText => {
+        // 從 scripts.html 中萃取出 <script> 標籤內的純 JS 內容並執行
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = htmlText;
+        const scripts = tempDiv.querySelectorAll('script');
+        scripts.forEach(oldScript => {
+          const newScript = document.createElement('script');
+          newScript.textContent = oldScript.textContent;
+          document.body.appendChild(newScript);
+        });
+      })
+      .catch(err => console.error("動態載入 scripts 失敗:", err));
+  </script>
+  
+</body>
+</html>
