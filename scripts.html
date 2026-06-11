@@ -27,6 +27,10 @@
     };
 
     function initApp() {
+      // 依據網址的 hash 自動切換至對應分頁，否則預設為 itinerary
+      const initialTab = location.hash.substring(1) || 'itinerary';
+      activateTab(initialTab);
+
       renderSkeleton();
       fetchInitialData();
       const toggle = document.getElementById('hideVisitedToggle');
@@ -41,6 +45,12 @@
     } else {
       window.onload = initApp;
     }
+
+    // 監聽網址的 Hash 變化，以支援瀏覽器上一頁/下一頁切換分頁
+    window.onhashchange = function() {
+      const tab = location.hash.substring(1) || 'itinerary';
+      activateTab(tab);
+    };
 
     // 骨架屏 (Skeleton Loader) 渲染，提升首載視覺體驗
     function renderSkeleton() {
@@ -258,20 +268,19 @@
     }
 
     function switchTab(tab) {
-      if (currentTab === tab) return;
+      location.hash = tab;
+    }
+
+    function activateTab(tab) {
+      const validTabs = ['itinerary', 'todo', 'packing', 'expenses', 'shopping'];
+      if (!validTabs.includes(tab)) {
+        tab = 'itinerary';
+      }
+      
       currentTab = tab;
       currentFilterGroup = '全部';
      
-      const tabs = ['itinerary', 'todo', 'packing', 'expenses', 'shopping'];
-      const tabLabels = {
-        itinerary: '隱藏去過',
-        todo: '隱藏已做',
-        packing: '隱藏打包',
-        expenses: '記帳明細',
-        shopping: '隱藏買過'
-      };
-     
-      tabs.forEach(key => {
+      validTabs.forEach(key => {
         const el = document.getElementById(`tab-${key}`);
         if(el) {
           el.className = (key === tab)
@@ -280,8 +289,23 @@
         }
       });
      
-      document.getElementById('toggleLabel').innerText = tabLabels[tab];
-      document.getElementById('mainToggleContainer').className = (tab === 'expenses') ? "hidden" : "flex items-center space-x-1 text-xs font-bold text-slate-500 bg-slate-100 hover:bg-slate-200/80 px-2.5 py-1.5 rounded-full cursor-pointer select-none transition-colors duration-150";
+      const tabLabels = {
+        itinerary: '隱藏去過',
+        todo: '隱藏已做',
+        packing: '隱藏打包',
+        expenses: '記帳明細',
+        shopping: '隱藏買過'
+      };
+      
+      const toggleLabel = document.getElementById('toggleLabel');
+      if (toggleLabel) toggleLabel.innerText = tabLabels[tab];
+      
+      const mainToggleContainer = document.getElementById('mainToggleContainer');
+      if (mainToggleContainer) {
+        mainToggleContainer.className = (tab === 'expenses')
+          ? "hidden"
+          : "flex items-center space-x-1 text-xs font-bold text-slate-500 bg-slate-100 hover:bg-slate-200/80 px-2.5 py-1.5 rounded-full cursor-pointer select-none transition-colors duration-150";
+      }
 
       updateSubControlMenu();
       renderCurrentTab();
