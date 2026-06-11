@@ -804,9 +804,17 @@
       let joOverage = (joPaidTWD - joShareTWD) + settlementOffsetTWD;
       
       let settlementText = "";
-      if (joOverage > 0) settlementText = `Will 應給 Jo $${Math.round(joOverage).toLocaleString()}`;
-      else if (joOverage < 0) settlementText = `Jo 應給 Will $${Math.round(Math.abs(joOverage)).toLocaleString()}`;
-      else settlementText = "兩不相欠";
+      // 🎯 核心修正：先做四捨五入，如果圓整後的絕對值小於等於 1，直接判定為兩不相欠！
+      let roundedOverage = Math.round(joOverage);
+      
+      if (Math.abs(roundedOverage) <= 1) {
+        settlementText = "兩不相欠";
+        joOverage = 0; // 同步歸零，讓下面的結清按鈕自動隱藏
+      } else if (roundedOverage > 0) {
+        settlementText = `Will 應給 Jo $${roundedOverage.toLocaleString()}`;
+      } else {
+        settlementText = `Jo 應給 Will $${Math.abs(roundedOverage).toLocaleString()}`;
+      }
 
       // 判斷是否需要顯示結清按鈕 (注意：這裡按鈕的觸發條件也要改看目前的 joOverage)
       let clearBtnHtml = "";
