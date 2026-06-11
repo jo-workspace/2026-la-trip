@@ -814,58 +814,51 @@
         </div>
       `;
 
-      // 快速記帳面板 (莫蘭迪粉綠 bg-[#5c6e5c]，超緊湊)
+      // 快速記帳面板 (零下拉、全一鍵點擊、完美對齊瘦身版)
       const formCard = document.createElement('div');
       formCard.className = "bg-[#5c6e5c] text-slate-100 p-5 rounded-2xl mb-4 shadow-md border border-[#4d5e4d]/40";
       formCard.innerHTML = `
-        <div class="space-y-4 text-slate-900">
-          <!-- 行 1: 品項 + 金額與幣別單鍵切換 -->
+        <div class="space-y-3 text-slate-900">
           <div class="grid grid-cols-5 gap-2">
-            <input type="text" id="exp-item" placeholder="品項名稱 (如: 麥當勞)" class="col-span-3 bg-white/95 text-slate-800 text-sm font-semibold px-3.5 py-2.5 rounded-xl focus:ring-2 focus:ring-slate-300 outline-none transition-all">
+            <input type="text" id="exp-item" placeholder="品項 (如: 麥當勞)" class="col-span-3 bg-white/95 text-slate-800 text-sm font-semibold px-3.5 py-2.5 rounded-xl focus:ring-2 focus:ring-slate-300 outline-none transition-all">
             <div class="col-span-2 relative flex items-center">
-              <input type="number" id="exp-amount" placeholder="金額" step="any" oninput="updateLiveExchange(this.value)" class="w-full bg-white/95 text-slate-800 text-sm font-bold pl-3.5 pr-11 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-300 transition-all">
-              <button onclick="toggleFormCurrencyShort()" id="curr-toggle" type="button" class="absolute right-1 text-[10px] font-black bg-[#4d5e4d] text-white px-2 py-1 rounded-lg cursor-pointer select-none active:scale-95 transition-all">USD</button>
+              <input type="number" id="exp-amount" placeholder="金額" step="any" oninput="updateLiveExchange(this.value)" class="w-full bg-white/95 text-slate-800 text-sm font-bold pl-3 pr-11 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-300 transition-all">
+              <button onclick="toggleFormCurrencyShort()" id="curr-toggle" type="button" class="absolute right-1 text-[10px] font-black bg-[#4d5e4d] text-white px-1.5 py-1 rounded-lg cursor-pointer select-none active:scale-95 transition-all">USD</button>
             </div>
           </div>
           <div id="live-calc" class="text-2xs font-extrabold text-amber-200 px-1 hidden transition-all">約合 TWD $0</div>
           
-          <!-- 行 2: 分類 (Emoji 按鈕，無標題) -->
-          <div class="flex items-center space-x-1.5 overflow-x-auto no-scrollbar py-0.5">
-            <div onclick="setFormCategory('🍔')" id="formcat-🍔" class="w-9.5 h-9.5 flex items-center justify-center bg-[#4d5e4d]/50 text-[#ecf3ec] text-base rounded-xl cursor-pointer select-none hover:text-white hover:bg-[#4d5e4d] transition-all" title="美食">🍔</div>
-            <div onclick="setFormCategory('🛒')" id="formcat-🛒" class="w-9.5 h-9.5 flex items-center justify-center bg-[#4d5e4d]/50 text-[#ecf3ec] text-base rounded-xl cursor-pointer select-none hover:text-white hover:bg-[#4d5e4d] transition-all" title="購物">🛒</div>
-            <div onclick="setFormCategory('🚗')" id="formcat-🚗" class="w-9.5 h-9.5 flex items-center justify-center bg-[#4d5e4d]/50 text-[#ecf3ec] text-base rounded-xl cursor-pointer select-none hover:text-white hover:bg-[#4d5e4d] transition-all" title="交通">🚗</div>
-            <div onclick="setFormCategory('⚾')" id="formcat-⚾" class="w-9.5 h-9.5 flex items-center justify-center bg-[#4d5e4d]/50 text-[#ecf3ec] text-base rounded-xl cursor-pointer select-none hover:text-white hover:bg-[#4d5e4d] transition-all" title="球場">⚾</div>
-            <div onclick="setFormCategory('🏨')" id="formcat-🏨" class="w-9.5 h-9.5 flex items-center justify-center bg-[#4d5e4d]/50 text-[#ecf3ec] text-base rounded-xl cursor-pointer select-none hover:text-white hover:bg-[#4d5e4d] transition-all" title="住宿">🏨</div>
-            <div onclick="setFormCategory('其他')" id="formcat-其他" class="px-3.5 h-9.5 flex items-center justify-center bg-[#4d5e4d]/50 text-[#ecf3ec] text-xs rounded-xl font-bold cursor-pointer select-none hover:text-white hover:bg-[#4d5e4d] transition-all">其他</div>
-          </div>
-
-          <!-- 行 3: 付款人與分攤人 -->
           <div class="grid grid-cols-2 gap-2">
-            <!-- 付款人 -->
-            <div class="flex items-center space-x-1.5 bg-[#4d5e4d]/30 p-1 rounded-xl w-full text-[10px]">
+            <div class="flex items-center space-x-1 bg-[#4d5e4d]/30 p-1 rounded-xl w-full">
+              <div onclick="setFormCategory('🍔')" id="formcat-🍔" class="flex-1 h-9 flex items-center justify-center text-base rounded-lg cursor-pointer select-none transition-all" title="美食">🍔</div>
+              <div onclick="setFormCategory('🛒')" id="formcat-🛒" class="flex-1 h-9 flex items-center justify-center text-base rounded-lg cursor-pointer select-none transition-all" title="購物">🛒</div>
+              <div onclick="setFormCategory('🚗')" id="formcat-🚗" class="flex-1 h-9 flex items-center justify-center text-base rounded-lg cursor-pointer select-none transition-all" title="交通">🚗</div>
+              <div onclick="setFormCategory('⚾')" id="formcat-⚾" class="flex-1 h-9 flex items-center justify-center text-base rounded-lg cursor-pointer select-none transition-all" title="球場">⚾</div>
+              <div onclick="setFormCategory('🏨')" id="formcat-🏨" class="flex-1 h-9 flex items-center justify-center text-base rounded-lg cursor-pointer select-none transition-all" title="住宿">🏨</div>
+              <div onclick="setFormCategory('其他')" id="formcat-其他" class="px-1.5 h-9 flex items-center justify-center text-[10px] font-extrabold text-[#ecf3ec] rounded-lg cursor-pointer select-none transition-all">🎨</div>
+            </div>
+
+            <div class="flex items-center space-x-1 bg-[#4d5e4d]/30 p-1 rounded-xl w-full text-[10px]">
               <span class="text-slate-200 pl-1 font-bold">付:</span>
               <div class="flex flex-1 p-0.5 rounded-lg text-[11px] font-extrabold bg-[#4d5e4d]/20">
                 <div onclick="setFormPaidBy('Jo')" id="paid-Jo" class="flex-1 h-9 flex items-center justify-center text-[11px] font-extrabold text-[#ecf3ec] rounded cursor-pointer select-none transition-all hover:text-white">Jo</div>
                 <div onclick="setFormPaidBy('Will')" id="paid-Will" class="flex-1 h-9 flex items-center justify-center text-[11px] font-extrabold text-[#ecf3ec] rounded cursor-pointer select-none transition-all hover:text-white">Will</div>
               </div>
             </div>
-            <!-- 分攤人 -->
-            <div class="flex items-center space-x-1.5 bg-[#4d5e4d]/30 p-1 rounded-xl w-full text-[10px]">
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div class="flex items-center space-x-1 bg-[#4d5e4d]/30 p-1 rounded-xl w-full text-[10px]">
               <span class="text-slate-200 pl-1 font-bold">攤:</span>
               <div class="flex flex-1 p-0.5 rounded-lg text-[11px] font-extrabold bg-[#4d5e4d]/20">
-                <div onclick="setFormSplit('公用')" id="split-公用" class="flex-1 h-9 flex items-center justify-center text-[11px] font-extrabold text-[#ecf3ec] rounded cursor-pointer select-none transition-all hover:text-white">公用</div>
+                <div onclick="setFormSplit('公用')" id="split-公用" class="flex-1 h-9 flex items-center justify-center text-[10px] font-extrabold text-[#ecf3ec] rounded cursor-pointer select-none transition-all hover:text-white">公用</div>
                 <div onclick="setFormSplit('Jo')" id="split-Jo" class="flex-1 h-9 flex items-center justify-center text-[11px] font-extrabold text-[#ecf3ec] rounded cursor-pointer select-none transition-all hover:text-white">Jo</div>
                 <div onclick="setFormSplit('Will')" id="split-Will" class="flex-1 h-9 flex items-center justify-center text-[11px] font-extrabold text-[#ecf3ec] rounded cursor-pointer select-none transition-all hover:text-white">Will</div>
               </div>
             </div>
+            <input type="text" id="exp-note" placeholder="備註 (選填)" class="w-full bg-white/95 text-slate-800 text-sm px-3 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-300 transition-all">
           </div>
 
-          <!-- 行 4: 備註說明 -->
-          <div>
-            <input type="text" id="exp-note" placeholder="備註 (選填)" class="w-full bg-white/95 text-slate-800 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-300 transition-all">
-          </div>
-
-          <!-- 行 5: 送出按鈕 -->
           <button onclick="submitExpenseForm()" id="submitExpBtn" class="w-full bg-white hover:bg-slate-50 active:scale-98 text-[#2c3a2c] font-black text-sm py-3 rounded-xl tracking-wider uppercase text-center cursor-pointer select-none transition-all shadow-xs">送出記帳</button>
         </div>
       `;
