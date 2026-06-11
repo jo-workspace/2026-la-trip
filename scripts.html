@@ -515,8 +515,18 @@
       if (todoData.length === 0) { container.innerHTML = '<div class="text-center py-12 text-slate-400 text-sm">目前沒有待辦事項</div>'; return; }
       container.innerHTML = '';
       
+      // Sort by category first, then by rowIndex to group categories together
+      const sortedTodo = [...todoData].sort((a, b) => {
+        const catA = a.category || "其他";
+        const catB = b.category || "其他";
+        if (catA !== catB) {
+          return catA.localeCompare(catB, 'zh-Hant');
+        }
+        return a.rowIndex - b.rowIndex;
+      });
+      
       let currentCategory = "";
-      todoData.forEach(item => {
+      sortedTodo.forEach(item => {
         if (hideDone && item.isDone) return;
         if (item.category !== currentCategory) {
           currentCategory = item.category;
@@ -551,8 +561,18 @@
       if (packingData.length === 0) { container.innerHTML = '<div class="text-center py-12 text-slate-400 text-sm">目前沒有打包清單</div>'; return; }
       container.innerHTML = '';
       
+      // Sort by category first, then by rowIndex to group categories together
+      const sortedPacking = [...packingData].sort((a, b) => {
+        const catA = a.category || "其他";
+        const catB = b.category || "其他";
+        if (catA !== catB) {
+          return catA.localeCompare(catB, 'zh-Hant');
+        }
+        return a.rowIndex - b.rowIndex;
+      });
+      
       let currentCategory = "";
-      packingData.forEach(item => {
+      sortedPacking.forEach(item => {
         if (hidePacked && item.isPacked) return;
         let pTokens = item.person ? item.person.split(/[\n,，]+/).map(t => t.trim()) : [];
         if (currentFilterGroup !== '全部' && !pTokens.includes(currentFilterGroup)) return;
