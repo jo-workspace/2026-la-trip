@@ -336,13 +336,13 @@
           const textSpan = el.querySelector('span:last-child');
           
           if (key === tab) {
-            el.className = "flex items-center justify-center py-1.5 px-3.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold rounded-full transition-all duration-300 active:scale-95 cursor-pointer";
+            el.className = "flex items-center justify-center py-1.5 px-3.5 bg-white/95 text-[#2c3e4c] font-bold rounded-full transition-all duration-300 active:scale-95 cursor-pointer shadow-xs";
             if (textSpan) {
               textSpan.classList.remove('hidden');
               textSpan.className = "text-xs font-bold tracking-wider ml-1.5";
             }
           } else {
-            el.className = "flex items-center justify-center py-2 px-3.5 text-slate-400 hover:text-slate-200 transition-all duration-300 rounded-full active:scale-95 cursor-pointer";
+            el.className = "flex items-center justify-center py-2 px-3.5 text-[#c4d1da] hover:text-white transition-all duration-300 rounded-full active:scale-95 cursor-pointer";
             if (textSpan) {
               textSpan.classList.add('hidden');
             }
@@ -353,9 +353,9 @@
         const sidebarEl = document.getElementById(`sidebar-tab-${key}`);
         if (sidebarEl) {
           if (key === tab) {
-            sidebarEl.className = "w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-white bg-slate-900 font-semibold border-l-4 border-emerald-500 pl-3 cursor-pointer";
+            sidebarEl.className = "w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-white bg-[#495e6d] font-semibold border-l-4 border-white pl-3 cursor-pointer";
           } else {
-            sidebarEl.className = "w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-slate-400 hover:text-white hover:bg-slate-900/50 font-medium border-l-4 border-transparent cursor-pointer";
+            sidebarEl.className = "w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-[#c4d1da] hover:text-white hover:bg-[#495e6d]/40 font-medium border-l-4 border-transparent cursor-pointer";
           }
         }
       });
