@@ -152,8 +152,11 @@
     // 隱藏/顯示已完成項目切換
     function toggleHideVisited() {
       const cb = document.getElementById('hideVisitedToggle');
+      const scb = document.getElementById('sidebarHideToggle');
       if (!cb) return;
-      cb.checked = !cb.checked;
+      const targetState = !cb.checked;
+      cb.checked = targetState;
+      if (scb) scb.checked = targetState;
       cb.dispatchEvent(new Event('change'));
       updateToggleBtnStyle();
     }
@@ -162,16 +165,28 @@
       const cb = document.getElementById('hideVisitedToggle');
       const icon = document.getElementById('toggleVisitedIcon');
       const btn = document.getElementById('toggleVisitedBtn');
-      if (!cb || !icon || !btn) return;
+      const sidebarIcon = document.getElementById('sidebar-toggle-icon');
+      const sidebarCb = document.getElementById('sidebarHideToggle');
+      if (!cb) return;
       
-      if (cb.checked) {
-        icon.innerText = "🙈";
-        btn.title = "已隱藏完成項目（點擊顯示全部）";
-        btn.className = "p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all duration-200 focus:outline-none active:scale-90 flex items-center justify-center cursor-pointer";
-      } else {
-        icon.innerText = "👁️";
-        btn.title = "已顯示全部項目（點擊隱藏完成）";
-        btn.className = "p-1.5 text-emerald-600 bg-emerald-50/70 hover:bg-emerald-100/70 rounded-full transition-all duration-200 focus:outline-none active:scale-90 flex items-center justify-center cursor-pointer";
+      const checked = cb.checked;
+      if (sidebarCb && sidebarCb.checked !== checked) {
+        sidebarCb.checked = checked;
+      }
+      if (sidebarIcon) {
+        sidebarIcon.innerText = checked ? "🙈" : "👁️";
+      }
+      
+      if (icon && btn) {
+        if (checked) {
+          icon.innerText = "🙈";
+          btn.title = "已隱藏完成項目（點擊顯示全部）";
+          btn.className = "p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all duration-200 focus:outline-none active:scale-90 flex items-center justify-center cursor-pointer";
+        } else {
+          icon.innerText = "👁️";
+          btn.title = "已顯示全部項目（點擊隱藏完成）";
+          btn.className = "p-1.5 text-emerald-600 bg-emerald-50/70 hover:bg-emerald-100/70 rounded-full transition-all duration-200 focus:outline-none active:scale-90 flex items-center justify-center cursor-pointer";
+        }
       }
     }
 
@@ -180,10 +195,68 @@
     });
   </script>
 </head>
-<body class="bg-slate-50 text-slate-800 antialiased pb-24">
+<body class="bg-slate-50 text-slate-800 antialiased pb-24 md:pb-6">
+
+  <!-- 電腦版左側邊欄 (Desktop Sidebar) -->
+  <aside class="hidden md:flex flex-col w-64 fixed inset-y-0 left-0 bg-slate-950 text-slate-100 z-40 border-r border-slate-900 select-none">
+    <!-- 頂部 Logo -->
+    <div class="px-6 py-5 border-b border-slate-900">
+      <div class="text-xl font-black tracking-tight text-white font-outfit select-none flex items-center space-x-2">
+        <span>🇺🇸</span><span class="tracking-wide">LA TRIP</span>
+      </div>
+    </div>
+    
+    <!-- 縱向選單 -->
+    <div class="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
+      <button id="sidebar-tab-itinerary" onclick="switchTab('itinerary')" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-white bg-slate-900 font-semibold border-l-4 border-emerald-500 pl-3 cursor-pointer">
+        <span class="text-lg">🗓️</span>
+        <span class="text-sm font-semibold tracking-wide">行程</span>
+      </button>
+      <button id="sidebar-tab-todo" onclick="switchTab('todo')" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-slate-400 hover:text-white hover:bg-slate-900/50 font-medium border-l-4 border-transparent cursor-pointer">
+        <span class="text-lg">✅</span>
+        <span class="text-sm font-semibold tracking-wide">待辦</span>
+      </button>
+      <button id="sidebar-tab-packing" onclick="switchTab('packing')" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-slate-400 hover:text-white hover:bg-slate-900/50 font-medium border-l-4 border-transparent cursor-pointer">
+        <span class="text-lg">🧳</span>
+        <span class="text-sm font-semibold tracking-wide">打包</span>
+      </button>
+      <button id="sidebar-tab-expenses" onclick="switchTab('expenses')" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-slate-400 hover:text-white hover:bg-slate-900/50 font-medium border-l-4 border-transparent cursor-pointer">
+        <span class="text-lg">💵</span>
+        <span class="text-sm font-semibold tracking-wide">記帳</span>
+      </button>
+      <button id="sidebar-tab-shopping" onclick="switchTab('shopping')" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-slate-400 hover:text-white hover:bg-slate-900/50 font-medium border-l-4 border-transparent cursor-pointer">
+        <span class="text-lg">🛒</span>
+        <span class="text-sm font-semibold tracking-wide">購物</span>
+      </button>
+    </div>
+
+    <!-- 底部控制項 (隱藏完成、重新整理、API設定) -->
+    <div class="p-4 border-t border-slate-900 space-y-3">
+      <!-- 隱藏已完成 (同步 hideVisitedToggle) -->
+      <div id="sidebar-toggle-container" class="flex items-center justify-between px-3 py-2.5 bg-slate-900/50 hover:bg-slate-900 rounded-xl cursor-pointer transition-all duration-200" onclick="toggleHideVisited()">
+        <div class="flex items-center space-x-2.5">
+          <span id="sidebar-toggle-icon" class="text-base select-none">🙈</span>
+          <span class="text-xs font-bold text-slate-300">隱藏完成項目</span>
+        </div>
+        <input type="checkbox" id="sidebarHideToggle" checked class="w-4 h-4 rounded bg-slate-800 border-slate-700 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-slate-950 cursor-pointer" onclick="event.stopPropagation();">
+      </div>
+
+      <!-- 重新整理 -->
+      <button onclick="handleRefresh()" class="w-full flex items-center space-x-2.5 px-3 py-2.5 bg-slate-900/50 hover:bg-slate-900 text-slate-300 hover:text-white rounded-xl transition-all duration-200 text-left font-bold cursor-pointer">
+        <span class="text-base select-none">🔄</span>
+        <span class="text-xs font-bold">重新整理</span>
+      </button>
+
+      <!-- API 設定 -->
+      <button onclick="openSettingsPrompt()" class="w-full flex items-center space-x-2.5 px-3 py-2.5 bg-slate-900/50 hover:bg-slate-900 text-slate-300 hover:text-white rounded-xl transition-all duration-200 text-left font-bold cursor-pointer">
+        <span class="text-base select-none">⚙️</span>
+        <span class="text-xs font-bold">API 設定</span>
+      </button>
+    </div>
+  </aside>
 
   <!-- 頂部導覽列 (單排超精簡控制區) -->
-  <header class="bg-white/80 backdrop-blur-md border-b border-slate-100 sticky top-0 z-40 px-4 py-2.5 shadow-xs flex justify-between items-center transition-all duration-200">
+  <header class="bg-white/80 backdrop-blur-md border-b border-slate-100 sticky top-0 z-45 px-4 py-2.5 shadow-xs flex justify-between items-center transition-transform duration-300 ease-in-out md:hidden">
     <div class="text-base font-black tracking-tight text-slate-900 font-outfit bg-gradient-to-r from-slate-950 to-slate-700 bg-clip-text text-transparent select-none flex items-center space-x-1.5">
       <span>🇺🇸</span><span class="tracking-wide">LA TRIP</span>
     </div>
@@ -210,7 +283,7 @@
   <div id="subSubControl" class="bg-slate-100/50 backdrop-blur-xs px-4 py-2 border-b border-slate-200/60 hidden flex space-x-1.5 overflow-x-auto no-scrollbar flex-shrink-0"></div>
 
   <!-- 主容器 -->
-  <main class="max-w-md mx-auto px-4 mt-4" id="mainContainer">
+  <main class="max-w-md mx-auto px-4 mt-4 md:ml-72 md:max-w-4xl md:px-8" id="mainContainer">
     <!-- 預設顯示骨架屏 -->
     <div id="skeletonContainer"></div>
   </main>
@@ -418,26 +491,26 @@
   </script>
   
   <!-- 手機板底部導覽列 (Bottom Navigation Bar) -->
-  <nav class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-slate-100 z-40 pb-[safe-area-inset-bottom] shadow-lg flex justify-around items-center h-16 select-none">
-    <button id="tab-itinerary" onclick="switchTab('itinerary')" class="flex flex-col items-center justify-center flex-1 py-1 text-slate-900 transition-colors active:scale-95">
-      <span class="text-xl transition-transform scale-110 duration-200">🗓️</span>
-      <span class="text-[10px] font-black mt-1.5 tracking-wider">行程</span>
+  <nav class="fixed bottom-0 left-0 right-0 bg-slate-950 border-t border-slate-900 z-40 pb-[safe-area-inset-bottom] shadow-lg flex justify-around items-center h-16 px-4 select-none md:hidden">
+    <button id="tab-itinerary" onclick="switchTab('itinerary')" class="flex items-center justify-center py-1.5 px-3.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold rounded-full transition-all duration-300 active:scale-95 cursor-pointer">
+      <span class="text-lg">🗓️</span>
+      <span class="text-xs font-bold tracking-wider ml-1.5">行程</span>
     </button>
-    <button id="tab-todo" onclick="switchTab('todo')" class="flex flex-col items-center justify-center flex-1 py-1 text-slate-400 transition-colors active:scale-95">
-      <span class="text-lg transition-transform scale-100 duration-200">✅</span>
-      <span class="text-[10px] font-medium mt-1.5 tracking-wider">待辦</span>
+    <button id="tab-todo" onclick="switchTab('todo')" class="flex items-center justify-center py-2 px-3.5 text-slate-400 hover:text-slate-250 transition-all duration-300 rounded-full active:scale-95 cursor-pointer">
+      <span class="text-lg">✅</span>
+      <span class="text-xs font-semibold tracking-wider ml-1.5 hidden">待辦</span>
     </button>
-    <button id="tab-packing" onclick="switchTab('packing')" class="flex flex-col items-center justify-center flex-1 py-1 text-slate-400 transition-colors active:scale-95">
-      <span class="text-lg transition-transform scale-100 duration-200">🧳</span>
-      <span class="text-[10px] font-medium mt-1.5 tracking-wider">打包</span>
+    <button id="tab-packing" onclick="switchTab('packing')" class="flex items-center justify-center py-2 px-3.5 text-slate-400 hover:text-slate-250 transition-all duration-300 rounded-full active:scale-95 cursor-pointer">
+      <span class="text-lg">🧳</span>
+      <span class="text-xs font-semibold tracking-wider ml-1.5 hidden">打包</span>
     </button>
-    <button id="tab-expenses" onclick="switchTab('expenses')" class="flex flex-col items-center justify-center flex-1 py-1 text-slate-400 transition-colors active:scale-95">
-      <span class="text-lg transition-transform scale-100 duration-200">💵</span>
-      <span class="text-[10px] font-medium mt-1.5 tracking-wider">記帳</span>
+    <button id="tab-expenses" onclick="switchTab('expenses')" class="flex items-center justify-center py-2 px-3.5 text-slate-400 hover:text-slate-250 transition-all duration-300 rounded-full active:scale-95 cursor-pointer">
+      <span class="text-lg">💵</span>
+      <span class="text-xs font-semibold tracking-wider ml-1.5 hidden">記帳</span>
     </button>
-    <button id="tab-shopping" onclick="switchTab('shopping')" class="flex flex-col items-center justify-center flex-1 py-1 text-slate-400 transition-colors active:scale-95">
-      <span class="text-lg transition-transform scale-100 duration-200">🛒</span>
-      <span class="text-[10px] font-medium mt-1.5 tracking-wider">購物</span>
+    <button id="tab-shopping" onclick="switchTab('shopping')" class="flex items-center justify-center py-2 px-3.5 text-slate-400 hover:text-slate-250 transition-all duration-300 rounded-full active:scale-95 cursor-pointer">
+      <span class="text-lg">🛒</span>
+      <span class="text-xs font-semibold tracking-wider ml-1.5 hidden">購物</span>
     </button>
   </nav>
 

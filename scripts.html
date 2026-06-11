@@ -26,6 +26,17 @@
       '航班': '✈️', '住宿': '🏨', '景點': '📍', '行程': '🗓️', '球場': '⚾', '交通': '🚗', '購物': '🛒', '美食': '🍔'
     };
 
+    function adjustStickyTops() {
+      const header = document.querySelector('header');
+      const subCtrl = document.getElementById('subSubControl');
+      const anchorBar = document.getElementById('itinerary-anchor-bar');
+      if (!header) return;
+      const isHidden = header.style.transform === 'translateY(-100%)';
+      const targetTop = isHidden ? '0px' : '53px';
+      if (subCtrl) subCtrl.style.top = targetTop;
+      if (anchorBar) anchorBar.style.top = targetTop;
+    }
+
     function initApp() {
       // 依據網址的 hash 自動切換至對應分頁，否則預設為 itinerary
       const initialTab = location.hash.substring(1) || 'itinerary';
@@ -33,10 +44,47 @@
 
       renderSkeleton();
       fetchInitialData();
+      
       const toggle = document.getElementById('hideVisitedToggle');
+      const sidebarToggle = document.getElementById('sidebarHideToggle');
+      
+      function handleToggleChange(e) {
+        const checked = e.target.checked;
+        if (toggle && toggle.checked !== checked) {
+          toggle.checked = checked;
+        }
+        if (sidebarToggle && sidebarToggle.checked !== checked) {
+          sidebarToggle.checked = checked;
+        }
+        updateToggleBtnStyle();
+        renderCurrentTab();
+      }
+
       if (toggle) {
-        toggle.removeEventListener('change', renderCurrentTab);
-        toggle.addEventListener('change', renderCurrentTab);
+        toggle.removeEventListener('change', handleToggleChange);
+        toggle.addEventListener('change', handleToggleChange);
+      }
+      if (sidebarToggle) {
+        sidebarToggle.removeEventListener('change', handleToggleChange);
+        sidebarToggle.addEventListener('change', handleToggleChange);
+      }
+
+      // 頂部 Header 滾動自動隱藏邏輯
+      let lastScrollY = window.scrollY;
+      const header = document.querySelector('header');
+      if (header) {
+        window.addEventListener('scroll', () => {
+          const currentScrollY = window.scrollY;
+          if (currentScrollY > lastScrollY && currentScrollY > 60) {
+            // 往下滾動 - 隱藏 Header
+            header.style.transform = 'translateY(-100%)';
+          } else {
+            // 往上滾動 - 顯示 Header
+            header.style.transform = 'translateY(0)';
+          }
+          adjustStickyTops();
+          lastScrollY = currentScrollY;
+        }, { passive: true });
       }
     }
 
@@ -265,6 +313,7 @@
       } else {
         subCtrl.className = "hidden";
       }
+      adjustStickyTops();
     }
 
     function switchTab(tab) {
@@ -281,19 +330,32 @@
       currentFilterGroup = '全部';
      
       validTabs.forEach(key => {
+        // 1. 手機板底部導覽列樣式切換 (Pill 展開動畫)
         const el = document.getElementById(`tab-${key}`);
-        if(el) {
-          const emojiSpan = el.querySelector('span:first-child');
+        if (el) {
           const textSpan = el.querySelector('span:last-child');
           
           if (key === tab) {
-            el.className = "flex flex-col items-center justify-center flex-1 py-1 text-slate-900 transition-colors active:scale-95";
-            if (emojiSpan) emojiSpan.className = "text-xl transition-transform scale-110 duration-200";
-            if (textSpan) textSpan.className = "text-[10px] font-black mt-1.5 tracking-wider";
+            el.className = "flex items-center justify-center py-1.5 px-3.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold rounded-full transition-all duration-300 active:scale-95 cursor-pointer";
+            if (textSpan) {
+              textSpan.classList.remove('hidden');
+              textSpan.className = "text-xs font-bold tracking-wider ml-1.5";
+            }
           } else {
-            el.className = "flex flex-col items-center justify-center flex-1 py-1 text-slate-400 hover:text-slate-650 transition-colors active:scale-95";
-            if (emojiSpan) emojiSpan.className = "text-lg transition-transform scale-100 duration-200";
-            if (textSpan) textSpan.className = "text-[10px] font-medium mt-1.5 tracking-wider";
+            el.className = "flex items-center justify-center py-2 px-3.5 text-slate-400 hover:text-slate-200 transition-all duration-300 rounded-full active:scale-95 cursor-pointer";
+            if (textSpan) {
+              textSpan.classList.add('hidden');
+            }
+          }
+        }
+        
+        // 2. 電腦版左側邊欄樣式切換
+        const sidebarEl = document.getElementById(`sidebar-tab-${key}`);
+        if (sidebarEl) {
+          if (key === tab) {
+            sidebarEl.className = "w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-white bg-slate-900 font-semibold border-l-4 border-emerald-500 pl-3 cursor-pointer";
+          } else {
+            sidebarEl.className = "w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-slate-400 hover:text-white hover:bg-slate-900/50 font-medium border-l-4 border-transparent cursor-pointer";
           }
         }
       });
@@ -401,6 +463,7 @@
 
       renderItineraryAnchorBar();
       renderItineraryCards();
+      adjustStickyTops();
     }
 
     function renderItineraryAnchorBar() {
