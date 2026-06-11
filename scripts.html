@@ -862,7 +862,8 @@
 
       // Wrap dashboard and formCard inside topSection wrapper
       const topSection = document.createElement('div');
-      topSection.className = "flex flex-col md:block min-h-[calc(100dvh-175px-env(safe-area-inset-bottom,0px))] md:min-h-0 mb-4 justify-between";
+      // 移除了 min-h 限制與 flex 撐開特性，直接使用簡單的 gap 與 mb 調整
+      topSection.className = "space-y-4 mb-4";
       topSection.appendChild(dashboard);
       topSection.appendChild(formCard);
       container.appendChild(topSection);
