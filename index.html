@@ -148,13 +148,45 @@
     }
 
     // 初次載入無須彈出引導，直接使用預設連結載入資料
+
+    // 隱藏/顯示已完成項目切換
+    function toggleHideVisited() {
+      const cb = document.getElementById('hideVisitedToggle');
+      if (!cb) return;
+      cb.checked = !cb.checked;
+      cb.dispatchEvent(new Event('change'));
+      updateToggleBtnStyle();
+    }
+
+    function updateToggleBtnStyle() {
+      const cb = document.getElementById('hideVisitedToggle');
+      const icon = document.getElementById('toggleVisitedIcon');
+      const btn = document.getElementById('toggleVisitedBtn');
+      if (!cb || !icon || !btn) return;
+      
+      if (cb.checked) {
+        icon.innerText = "🙈";
+        btn.title = "已隱藏完成項目（點擊顯示全部）";
+        btn.className = "p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all duration-200 focus:outline-none active:scale-90 flex items-center justify-center cursor-pointer";
+      } else {
+        icon.innerText = "👁️";
+        btn.title = "已顯示全部項目（點擊隱藏完成）";
+        btn.className = "p-1.5 text-emerald-600 bg-emerald-50/70 hover:bg-emerald-100/70 rounded-full transition-all duration-200 focus:outline-none active:scale-90 flex items-center justify-center cursor-pointer";
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      setTimeout(updateToggleBtnStyle, 100);
+    });
   </script>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased pb-16">
 
   <!-- 頂部導覽列 -->
-  <header class="bg-white/80 backdrop-blur-md border-b border-slate-100 sticky top-0 z-40 px-3 py-3 shadow-xs flex justify-between items-center transition-all duration-200">
-    <div class="flex space-x-1.5 overflow-x-auto no-scrollbar py-0.5">
+  <!-- 頂部導覽列 (單排超精簡滿版設計) -->
+  <header class="bg-white/80 backdrop-blur-md border-b border-slate-100 sticky top-0 z-40 px-3 py-2.5 shadow-xs flex justify-between items-center transition-all duration-200">
+    <!-- 左側：滿版滑動分頁 Tab Bar -->
+    <div class="flex space-x-1.5 overflow-x-auto no-scrollbar py-0.5 max-w-[calc(100%-125px)]">
       <button id="tab-itinerary" onclick="switchTab('itinerary')" class="px-3.5 py-1.5 text-sm font-bold bg-slate-900 text-white rounded-full transition-all duration-200 whitespace-nowrap shadow-xs active:scale-95">🗓️ 行程</button>
       <button id="tab-todo" onclick="switchTab('todo')" class="px-3.5 py-1.5 text-sm font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-all duration-200 whitespace-nowrap active:scale-95">✅ 待辦</button>
       <button id="tab-packing" onclick="switchTab('packing')" class="px-3.5 py-1.5 text-sm font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-all duration-200 whitespace-nowrap active:scale-95">🧳 打包</button>
@@ -162,7 +194,14 @@
       <button id="tab-shopping" onclick="switchTab('shopping')" class="px-3.5 py-1.5 text-sm font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-all duration-200 whitespace-nowrap active:scale-95">🛒 購物</button>
     </div>
    
-    <div class="flex items-center space-x-1.5 flex-shrink-0 ml-2">
+    <!-- 右側：按鈕控制區 -->
+    <div class="flex items-center space-x-1.5 flex-shrink-0 ml-1.5">
+      <!-- 隱藏開關 (隱藏的 checkbox + 點選按鈕) -->
+      <input type="checkbox" id="hideVisitedToggle" checked class="hidden">
+      <button id="toggleVisitedBtn" onclick="toggleHideVisited()" class="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-all duration-200 focus:outline-none active:scale-90 flex items-center justify-center cursor-pointer" title="切換隱藏完成項目">
+        <span id="toggleVisitedIcon" class="block text-base leading-none select-none">🙈</span>
+      </button>
+      
       <!-- 重新整理按鈕 -->
       <button id="refreshBtn" onclick="handleRefresh()" class="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-all duration-200 focus:outline-none active:scale-90" title="強製重新讀取資料">
         <span id="refreshIcon" class="block text-base leading-none select-none">🔄</span>
@@ -172,12 +211,6 @@
       <button id="settingsBtn" onclick="openSettingsPrompt()" class="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-all duration-200 focus:outline-none active:scale-90" title="API 設定">
         <span class="block text-base leading-none select-none">⚙️</span>
       </button>
-
-      <!-- 隱藏開關 -->
-      <label id="mainToggleContainer" class="flex items-center space-x-1 text-xs font-bold text-slate-500 bg-slate-100 hover:bg-slate-200/80 px-2.5 py-1.5 rounded-full cursor-pointer select-none transition-colors duration-150">
-        <input type="checkbox" id="hideVisitedToggle" checked class="w-3.5 h-3.5 rounded border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer">
-        <span id="toggleLabel" class="tracking-wider uppercase">隱藏去過</span>
-      </label>
     </div>
   </header>
 
