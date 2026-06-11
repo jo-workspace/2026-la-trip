@@ -657,54 +657,84 @@
       if (packingData.length === 0) { container.innerHTML = '<div class="text-center py-12 text-slate-400 text-sm">目前沒有打包清單</div>'; return; }
       container.innerHTML = '';
       
-      // Sort by category first, then by rowIndex to group categories together
-      const sortedPacking = [...packingData].sort((a, b) => {
-        const catA = a.category || "其他";
-        const catB = b.category || "其他";
-        if (catA !== catB) {
-          return catA.localeCompare(catB, 'zh-Hant');
-        }
-        return a.rowIndex - b.rowIndex;
-      });
-      
-      let currentCategory = "";
-      sortedPacking.forEach(item => {
+      // 1. 過濾與分組資料
+      let grouped = {};
+      packingData.forEach(item => {
         if (hidePacked && item.isPacked) return;
+        
         let pTokens = item.person ? item.person.split(/[\n,，]+/).map(t => t.trim()) : [];
         if (currentFilterGroup !== '全部' && !pTokens.includes(currentFilterGroup)) return;
-
-        if (item.category !== currentCategory) {
-          currentCategory = item.category;
-          const catHeader = document.createElement('div');
-          catHeader.className = "mt-6 mb-3 text-xs font-bold text-slate-400 uppercase tracking-wider pl-1";
-          catHeader.innerText = currentCategory;
-          container.appendChild(catHeader);
-        }
-       
-        let badgesHtml = "";
-        pTokens.forEach(p => {
-          let colorClass = "bg-emerald-55 text-emerald-600 border border-emerald-100/50";
-          if (p === 'Jo') colorClass = "bg-indigo-55 text-indigo-600 border border-indigo-100/50";
-          else if (p === 'Will') colorClass = "bg-slate-100 text-slate-600 border border-slate-200/50";
-          badgesHtml += `<span class="text-[10px] font-bold ${colorClass} px-2.5 py-0.5 rounded-full select-none tracking-wider">${p}</span>`;
-        });
-
+        
+        const cat = item.category || "其他";
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(item);
+      });
+      
+      const categories = Object.keys(grouped).sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+      
+      if (categories.length === 0) {
+        container.innerHTML = '<div class="text-center py-12 text-slate-400 text-sm">此分類下所有行李皆已打包！🧳✨</div>';
+        return;
+      }
+      
+      categories.forEach(cat => {
+        // 排序各類別下的項目 (按 rowIndex)
+        grouped[cat].sort((a, b) => a.rowIndex - b.rowIndex);
+        
+        const allItemsPacked = grouped[cat].every(item => item.isPacked);
+        
         const card = document.createElement('div');
-        card.className = `bg-white border ${item.isPacked ? 'border-slate-100 opacity-40' : 'border-slate-100 shadow-2xs hover:shadow-xs'} rounded-2xl p-4.5 mb-2 flex justify-between items-center transition-all duration-300 transform origin-top`;
-        card.id = `packing-${item.rowIndex}`;
-        card.innerHTML = `
-          <div class="flex-1 pr-4">
-            <div class="flex flex-wrap gap-1 mb-2">${badgesHtml}</div>
-            <h3 class="text-base font-extrabold text-slate-955 leading-tight ${item.isPacked ? 'line-through text-slate-400' : ''}">${item.item}</h3>
-            ${item.note ? `<p class="text-sm text-slate-500 font-medium mt-2.5 leading-relaxed">${item.note}</p>` : ''}
-          </div>
-          <div class="flex items-center justify-center pl-2 flex-shrink-0 space-x-1.5 h-full">
-            <button onclick="openPackingModal(${item.rowIndex})" class="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all focus:outline-none flex items-center justify-center cursor-pointer active:scale-90" title="編輯">
-              <span class="text-xs leading-none select-none">✎</span>
-            </button>
-            <input type="checkbox" ${item.isPacked ? 'checked' : ''} onclick="togglePackingArchive(${item.rowIndex}, this)" class="w-5.5 h-5.5 rounded-md border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer transition-transform duration-100 active:scale-90">
+        card.className = allItemsPacked 
+          ? "bg-slate-55 border border-slate-100 rounded-2xl p-4.5 mb-4 shadow-none opacity-80 transition-all duration-300"
+          : "bg-white border border-slate-100/80 rounded-2xl p-4.5 mb-4 shadow-3xs hover:shadow-2xs transition-all duration-300";
+        
+        let headerHtml = `
+          <div class="text-sm font-black border-b border-slate-100 pb-2.5 mb-2 flex justify-between items-center select-none ${
+            allItemsPacked ? 'text-slate-400' : 'text-slate-900'
+          }">
+            <div class="flex items-center">
+              ${allItemsPacked ? '<span class="text-emerald-500 mr-1.5 font-bold">✓</span>' : ''}
+              <span>📦 ${cat}</span>
+            </div>
+            ${allItemsPacked ? '<span class="text-[10px] font-extrabold text-[#3a5240] bg-emerald-50/50 px-2 py-0.5 rounded-md">ALL PACKED</span>' : ''}
           </div>
         `;
+        
+        let itemsHtml = '<div class="divide-y divide-slate-100/60">';
+        grouped[cat].forEach(item => {
+          let badgesHtml = "";
+          if (currentFilterGroup === '全部' && item.person) {
+            let pTokens = item.person.split(/[\n,，]+/).map(t => t.trim());
+            pTokens.forEach(p => {
+              if (!p) return;
+              let colorClass = "bg-emerald-50/70 text-emerald-600 border border-emerald-100/50";
+              if (p === 'Jo') colorClass = "bg-indigo-50/70 text-indigo-650 border border-indigo-100/50";
+              else if (p === 'Will') colorClass = "bg-slate-100 text-slate-650 border border-slate-200/50";
+              badgesHtml += `<span class="inline-block text-[9px] font-bold ${colorClass} px-1.5 py-0.2 rounded ml-1.5 tracking-wide">${p}</span>`;
+            });
+          }
+          
+          itemsHtml += `
+            <div id="packing-row-${item.rowIndex}" class="flex items-center justify-between py-2.5 transition-all duration-200 ${item.isPacked ? 'opacity-40' : ''}">
+              <div class="flex items-center space-x-2.5 min-w-0 flex-1 pr-2">
+                <input type="checkbox" ${item.isPacked ? 'checked' : ''} onclick="togglePackingArchive(${item.rowIndex}, this)" class="w-5 h-5 rounded border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer flex-shrink-0 transition-transform duration-100 active:scale-90">
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center flex-wrap gap-y-0.5">
+                    <span class="packing-title text-sm font-bold text-slate-800 leading-tight ${item.isPacked ? 'line-through text-slate-400' : ''}">${item.item}</span>
+                    ${badgesHtml}
+                  </div>
+                  ${item.note ? `<p class="text-[11px] text-slate-400 font-medium mt-0.5 leading-normal">${item.note}</p>` : ''}
+                </div>
+              </div>
+              <button onclick="openPackingModal(${item.rowIndex})" class="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all flex items-center justify-center cursor-pointer active:scale-90 flex-shrink-0" title="編輯">
+                <span class="text-2xs leading-none select-none">✎</span>
+              </button>
+            </div>
+          `;
+        });
+        itemsHtml += '</div>';
+        
+        card.innerHTML = headerHtml + itemsHtml;
         container.appendChild(card);
       });
     }
@@ -1267,20 +1297,24 @@
       const found = packingData.find(item => item.rowIndex === rowIndex);
       if (found) found.isPacked = isChecked;
 
-      const el = document.getElementById('packing-' + rowIndex);
+      const el = document.getElementById('packing-row-' + rowIndex);
       if (el) {
         if (isChecked) {
           el.classList.add('opacity-40');
-          el.querySelector('h3').classList.add('line-through', 'text-slate-400');
+          const titleSpan = el.querySelector('.packing-title');
+          if (titleSpan) titleSpan.classList.add('line-through', 'text-slate-400');
         } else {
           el.classList.remove('opacity-40');
-          el.querySelector('h3').classList.remove('line-through', 'text-slate-400');
+          const titleSpan = el.querySelector('.packing-title');
+          if (titleSpan) titleSpan.classList.remove('line-through', 'text-slate-400');
         }
       }
 
       const hidePacked = document.getElementById('hideVisitedToggle').checked;
       if (hidePacked && isChecked && el) {
         el.classList.add('scale-y-0', 'opacity-0', 'duration-300', 'transition-all');
+        setTimeout(renderPacking, 250);
+      } else {
         setTimeout(renderPacking, 250);
       }
 
