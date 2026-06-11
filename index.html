@@ -68,13 +68,27 @@
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(requestBody)
                   })
-                  .then(res => res.json())
                   .then(res => {
+                    if (!res.ok) {
+                      throw new Error(`HTTP 錯誤狀態: ${res.status}`);
+                    }
+                    return res.text();
+                  })
+                  .then(text => {
+                    let res;
+                    try {
+                      res = JSON.parse(text);
+                    } catch (e) {
+                      console.error("解析 API 回傳失敗。原始內容:", text);
+                      if (text.includes("<!DOCTYPE html>") || text.includes("<html") || text.startsWith("The page") || text.includes("google.com")) {
+                        throw new Error("API 網址回傳了 HTML 網頁而非 JSON。這代表您可能輸入了錯誤的網址（例如試算表網址、或是 /dev 開發網址），或者您尚未發佈此 Web App 並授權給「任何人(Anyone)」存取。");
+                      }
+                      throw new Error(`回傳格式非 JSON: ${text.substring(0, 100)}...`);
+                    }
+                    
                     if (res && (res.error || res.status === 'error')) {
                       if (failureCb) {
                         failureCb(new Error(res.error || "API 執行失敗"));
-                      } else {
-                        console.error("API error:", res.error);
                       }
                     } else {
                       if (successCb) {
@@ -183,6 +197,179 @@
     <div class="relative max-w-full max-h-full flex items-center justify-center">
       <img id="lightbox-img" src="" class="max-w-full max-h-[85vh] object-contain shadow-2xl rounded-lg" alt="Enlarged view">
       <button onclick="event.stopPropagation(); closeLightbox();" class="absolute -top-12 right-0 text-white text-3xl font-light p-2 hover:opacity-80 active:scale-90 transition-transform">✕</button>
+    </div>
+  </div>
+
+  <!-- 1. 行程 Modal -->
+  <div id="modal-itinerary" class="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden opacity-0 transition-opacity duration-200">
+    <div class="bg-white rounded-t-3xl sm:rounded-2xl w-full sm:max-w-md p-6 shadow-xl max-h-[90vh] overflow-y-auto transform translate-y-10 transition-transform duration-200">
+      <div class="flex justify-between items-center pb-4 border-b border-slate-100 mb-4">
+        <h2 id="itinerary-modal-title" class="text-lg font-bold text-slate-900">新增行程項目</h2>
+        <button onclick="closeItineraryModal()" class="text-slate-400 hover:text-slate-700 text-xl font-bold cursor-pointer p-1">✕</button>
+      </div>
+      <form id="itinerary-form" onsubmit="event.preventDefault(); submitItineraryForm();">
+        <input type="hidden" id="iti-rowIndex">
+        <input type="hidden" id="iti-isVisited" value="false">
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          <div>
+            <label class="block text-2xs font-extrabold text-slate-500 uppercase tracking-wider mb-1">日期天數 *</label>
+            <input type="text" id="iti-day" placeholder="如 Day 1" required class="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold">
+          </div>
+          <div>
+            <label class="block text-2xs font-extrabold text-slate-500 uppercase tracking-wider mb-1">時間 (選填)</label>
+            <input type="text" id="iti-time" placeholder="如 09:00" class="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold">
+          </div>
+        </div>
+        <div class="mb-4">
+          <label class="block text-2xs font-extrabold text-slate-500 uppercase tracking-wider mb-1">分類 *</label>
+          <select id="iti-type" required class="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold">
+            <option value="景點">📍 景點</option>
+            <option value="美食">🍔 美食</option>
+            <option value="交通">🚗 交通</option>
+            <option value="住宿">🏨 住宿</option>
+            <option value="航班">✈️ 航班</option>
+            <option value="球場">⚾ 球場</option>
+            <option value="購物">🛒 購物</option>
+            <option value="行程">🗓️ 行程</option>
+          </select>
+        </div>
+        <div class="mb-4">
+          <label class="block text-2xs font-extrabold text-slate-500 uppercase tracking-wider mb-1">名稱/標題 *</label>
+          <input type="text" id="iti-title" placeholder="景點或餐廳名稱" required class="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold">
+        </div>
+        <div class="mb-4">
+          <label class="block text-2xs font-extrabold text-slate-500 uppercase tracking-wider mb-1">說明/備註</label>
+          <textarea id="iti-content" rows="3" placeholder="輸入相關備註事項..." class="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold"></textarea>
+        </div>
+        <div class="mb-4">
+          <label class="block text-2xs font-extrabold text-slate-500 uppercase tracking-wider mb-1">導航連結 (選填)</label>
+          <input type="url" id="iti-links" placeholder="Google 地圖連結" class="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold">
+        </div>
+        <div class="flex space-x-3 mt-6">
+          <button type="button" id="iti-delete-btn" onclick="deleteItinerary()" class="btn-delete bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-600 font-bold text-sm px-4.5 py-2.5 rounded-xl transition-all hidden">🗑️ 刪除</button>
+          <button type="button" onclick="closeItineraryModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-bold text-sm py-2.5 rounded-xl transition-all">取消</button>
+          <button type="submit" id="iti-save-btn" class="flex-1 bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-bold text-sm py-2.5 rounded-xl transition-all">儲存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. 待辦 Modal -->
+  <div id="modal-todo" class="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden opacity-0 transition-opacity duration-200">
+    <div class="bg-white rounded-t-3xl sm:rounded-2xl w-full sm:max-w-md p-6 shadow-xl max-h-[90vh] overflow-y-auto transform translate-y-10 transition-transform duration-200">
+      <div class="flex justify-between items-center pb-4 border-b border-slate-100 mb-4">
+        <h2 id="todo-modal-title" class="text-lg font-bold text-slate-900">新增待辦事項</h2>
+        <button onclick="closeTodoModal()" class="text-slate-400 hover:text-slate-700 text-xl font-bold cursor-pointer p-1">✕</button>
+      </div>
+      <form id="todo-form" onsubmit="event.preventDefault(); submitTodoForm();">
+        <input type="hidden" id="todo-rowIndex">
+        <input type="hidden" id="todo-isDone" value="false">
+        <div class="mb-4">
+          <label class="block text-2xs font-extrabold text-slate-500 uppercase tracking-wider mb-1">分類 *</label>
+          <input type="text" id="todo-category" placeholder="如 機票簽證, 行前準備" required class="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold">
+        </div>
+        <div class="mb-4">
+          <label class="block text-2xs font-extrabold text-slate-500 uppercase tracking-wider mb-1">待辦任務 *</label>
+          <input type="text" id="todo-task" placeholder="任務名稱..." required class="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold">
+        </div>
+        <div class="mb-4">
+          <label class="block text-2xs font-extrabold text-slate-500 uppercase tracking-wider mb-1">詳細備註</label>
+          <textarea id="todo-note" rows="3" placeholder="輸入相關詳細備註..." class="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold"></textarea>
+        </div>
+        <div class="flex space-x-3 mt-6">
+          <button type="button" id="todo-delete-btn" onclick="deleteTodo()" class="btn-delete bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-600 font-bold text-sm px-4.5 py-2.5 rounded-xl transition-all hidden">🗑️ 刪除</button>
+          <button type="button" onclick="closeTodoModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-bold text-sm py-2.5 rounded-xl transition-all">取消</button>
+          <button type="submit" id="todo-save-btn" class="flex-1 bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-bold text-sm py-2.5 rounded-xl transition-all">儲存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. 打包 Modal -->
+  <div id="modal-packing" class="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden opacity-0 transition-opacity duration-200">
+    <div class="bg-white rounded-t-3xl sm:rounded-2xl w-full sm:max-w-md p-6 shadow-xl max-h-[90vh] overflow-y-auto transform translate-y-10 transition-transform duration-200">
+      <div class="flex justify-between items-center pb-4 border-b border-slate-100 mb-4">
+        <h2 id="packing-modal-title" class="text-lg font-bold text-slate-900">新增打包行李</h2>
+        <button onclick="closePackingModal()" class="text-slate-400 hover:text-slate-700 text-xl font-bold cursor-pointer p-1">✕</button>
+      </div>
+      <form id="packing-form" onsubmit="event.preventDefault(); submitPackingForm();">
+        <input type="hidden" id="packing-rowIndex">
+        <input type="hidden" id="packing-isPacked" value="false">
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          <div>
+            <label class="block text-2xs font-extrabold text-slate-500 uppercase tracking-wider mb-1">分類 *</label>
+            <input type="text" id="packing-category" placeholder="如 衣物, 3C電器" required class="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold">
+          </div>
+          <div>
+            <label class="block text-2xs font-extrabold text-slate-500 uppercase tracking-wider mb-1">準備人 *</label>
+            <input type="text" id="packing-person" placeholder="如 Jo, Will, 公用" required class="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold">
+          </div>
+        </div>
+        <div class="mb-4">
+          <label class="block text-2xs font-extrabold text-slate-500 uppercase tracking-wider mb-1">物品名稱 *</label>
+          <input type="text" id="packing-item" placeholder="準備帶的物品..." required class="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold">
+        </div>
+        <div class="mb-4">
+          <label class="block text-2xs font-extrabold text-slate-500 uppercase tracking-wider mb-1">說明/備註</label>
+          <textarea id="packing-note" rows="3" placeholder="輸入相關說明..." class="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold"></textarea>
+        </div>
+        <div class="flex space-x-3 mt-6">
+          <button type="button" id="packing-delete-btn" onclick="deletePacking()" class="btn-delete bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-600 font-bold text-sm px-4.5 py-2.5 rounded-xl transition-all hidden">🗑️ 刪除</button>
+          <button type="button" onclick="closePackingModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-bold text-sm py-2.5 rounded-xl transition-all">取消</button>
+          <button type="submit" id="packing-save-btn" class="flex-1 bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-bold text-sm py-2.5 rounded-xl transition-all">儲存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 4. 購物 Modal -->
+  <div id="modal-shopping" class="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden opacity-0 transition-opacity duration-200">
+    <div class="bg-white rounded-t-3xl sm:rounded-2xl w-full sm:max-w-md p-6 shadow-xl max-h-[90vh] overflow-y-auto transform translate-y-10 transition-transform duration-200">
+      <div class="flex justify-between items-center pb-4 border-b border-slate-100 mb-4">
+        <h2 id="shopping-modal-title" class="text-lg font-bold text-slate-900">新增購物裝備</h2>
+        <button onclick="closeShoppingModal()" class="text-slate-400 hover:text-slate-700 text-xl font-bold cursor-pointer p-1">✕</button>
+      </div>
+      <form id="shopping-form" onsubmit="event.preventDefault(); submitShoppingForm();">
+        <input type="hidden" id="shop-rowIndex">
+        <input type="hidden" id="shop-isDone" value="false">
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          <div>
+            <label class="block text-2xs font-extrabold text-slate-500 uppercase tracking-wider mb-1">購買通路/商店 *</label>
+            <input type="text" id="shop-store" placeholder="如 Costco, Target" required class="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold">
+          </div>
+          <div>
+            <label class="block text-2xs font-extrabold text-slate-500 uppercase tracking-wider mb-1">為誰購買 *</label>
+            <input type="text" id="shop-forWhom" placeholder="如 Jo, Will, 特特, 公用" required class="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold">
+          </div>
+        </div>
+        <div class="grid grid-cols-3 gap-3 mb-4">
+          <div class="col-span-2">
+            <label class="block text-2xs font-extrabold text-slate-500 uppercase tracking-wider mb-1">物品名稱 *</label>
+            <input type="text" id="shop-item" placeholder="欲購買物品..." required class="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold">
+          </div>
+          <div>
+            <label class="block text-2xs font-extrabold text-slate-500 uppercase tracking-wider mb-1">數量 *</label>
+            <input type="text" id="shop-quantity" value="1" required class="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold text-center font-bold">
+          </div>
+        </div>
+        <div class="mb-4">
+          <label class="block text-2xs font-extrabold text-slate-500 uppercase tracking-wider mb-1">圖片連結 (選填)</label>
+          <input type="url" id="shop-image" placeholder="商品縮圖 https://..." class="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold">
+        </div>
+        <div class="mb-4">
+          <label class="block text-2xs font-extrabold text-slate-500 uppercase tracking-wider mb-1">參考官網連結 (選填)</label>
+          <input type="url" id="shop-url" placeholder="產品詳情網址 https://..." class="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold">
+        </div>
+        <div class="mb-4">
+          <label class="block text-2xs font-extrabold text-slate-500 uppercase tracking-wider mb-1">備註說明</label>
+          <textarea id="shop-note" rows="2" placeholder="規格、型號或相關說明..." class="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold"></textarea>
+        </div>
+        <div class="flex space-x-3 mt-6">
+          <button type="button" id="shop-delete-btn" onclick="deleteShopping()" class="btn-delete bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-600 font-bold text-sm px-4.5 py-2.5 rounded-xl transition-all hidden">🗑️ 刪除</button>
+          <button type="button" onclick="closeShoppingModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-bold text-sm py-2.5 rounded-xl transition-all">取消</button>
+          <button type="submit" id="shop-save-btn" class="flex-1 bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-bold text-sm py-2.5 rounded-xl transition-all">儲存</button>
+        </div>
+      </form>
     </div>
   </div>
 

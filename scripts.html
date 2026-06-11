@@ -26,11 +26,21 @@
       '航班': '✈️', '住宿': '🏨', '景點': '📍', '行程': '🗓️', '球場': '⚾', '交通': '🚗', '購物': '🛒', '美食': '🍔'
     };
 
-    window.onload = function() {
+    function initApp() {
       renderSkeleton();
       fetchInitialData();
-      document.getElementById('hideVisitedToggle').addEventListener('change', renderCurrentTab);
-    };
+      const toggle = document.getElementById('hideVisitedToggle');
+      if (toggle) {
+        toggle.removeEventListener('change', renderCurrentTab);
+        toggle.addEventListener('change', renderCurrentTab);
+      }
+    }
+
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+      initApp();
+    } else {
+      window.onload = initApp;
+    }
 
     // 骨架屏 (Skeleton Loader) 渲染，提升首載視覺體驗
     function renderSkeleton() {
@@ -195,8 +205,24 @@
 
     function updateSubControlMenu() {
       const subCtrl = document.getElementById('subSubControl');
-      if (currentTab === 'packing') {
-        subCtrl.className = "bg-slate-100/50 backdrop-blur-xs px-4 py-2 border-b border-slate-200/60 flex space-x-1.5 overflow-x-auto no-scrollbar flex-shrink-0";
+      subCtrl.innerHTML = '';
+      
+      if (currentTab === 'todo') {
+        subCtrl.className = "bg-slate-50/90 backdrop-blur-xs px-4 py-2 border-b border-slate-200/40 sticky top-[53px] z-30 flex space-x-1.5 overflow-x-auto no-scrollbar flex-shrink-0 items-center";
+        const addBtn = document.createElement('button');
+        addBtn.onclick = () => openTodoModal();
+        addBtn.className = "px-3 py-1 text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-250 hover:bg-emerald-100 rounded-full cursor-pointer select-none whitespace-nowrap shadow-3xs transition-all active:scale-95 flex items-center space-x-1 flex-shrink-0";
+        addBtn.innerHTML = `<span>➕</span><span>新增待辦</span>`;
+        subCtrl.appendChild(addBtn);
+      } else if (currentTab === 'packing') {
+        subCtrl.className = "bg-slate-50/90 backdrop-blur-xs px-4 py-2 border-b border-slate-200/40 sticky top-[53px] z-30 flex space-x-1.5 overflow-x-auto no-scrollbar flex-shrink-0 items-center";
+        
+        const addBtn = document.createElement('button');
+        addBtn.onclick = () => openPackingModal();
+        addBtn.className = "px-3 py-1 text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-250 hover:bg-emerald-100 rounded-full cursor-pointer select-none whitespace-nowrap shadow-3xs transition-all active:scale-95 flex items-center space-x-1 flex-shrink-0 mr-1.5";
+        addBtn.innerHTML = `<span>➕</span><span>新增打包</span>`;
+        subCtrl.appendChild(addBtn);
+
         let personSet = new Set();
         packingData.forEach(item => {
           if (item.person) {
@@ -204,9 +230,18 @@
             tokens.forEach(t => { if(t.trim()) personSet.add(t.trim()); });
           }
         });
-        buildFilterMenu(['全部', ...Array.from(personSet)]);
+        appendFilterElements(['全部', ...Array.from(personSet)], (target) => {
+          if (currentTab === 'packing') renderPacking();
+        });
       } else if (currentTab === 'shopping') {
-        subCtrl.className = "bg-slate-100/50 backdrop-blur-xs px-4 py-2 border-b border-slate-200/60 flex space-x-1.5 overflow-x-auto no-scrollbar flex-shrink-0";
+        subCtrl.className = "bg-slate-50/90 backdrop-blur-xs px-4 py-2 border-b border-slate-200/40 sticky top-[53px] z-30 flex space-x-1.5 overflow-x-auto no-scrollbar flex-shrink-0 items-center";
+        
+        const addBtn = document.createElement('button');
+        addBtn.onclick = () => openShoppingModal();
+        addBtn.className = "px-3 py-1 text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-250 hover:bg-emerald-100 rounded-full cursor-pointer select-none whitespace-nowrap shadow-3xs transition-all active:scale-95 flex items-center space-x-1 flex-shrink-0 mr-1.5";
+        addBtn.innerHTML = `<span>➕</span><span>新增購物</span>`;
+        subCtrl.appendChild(addBtn);
+
         let storeSet = new Set();
         shoppingData.forEach(item => {
           if (item.store) {
@@ -214,7 +249,9 @@
             tokens.forEach(t => { if(t.trim()) storeSet.add(t.trim()); });
           }
         });
-        buildFilterMenu(['全部', ...Array.from(storeSet)]);
+        appendFilterElements(['全部', ...Array.from(storeSet)], (target) => {
+          if (currentTab === 'shopping') renderShopping();
+        });
       } else {
         subCtrl.className = "hidden";
       }
@@ -250,36 +287,31 @@
       renderCurrentTab();
     }
 
-    function buildFilterMenu(list) {
+    function appendFilterElements(list, onFilterChange) {
       const subCtrl = document.getElementById('subSubControl');
-      subCtrl.innerHTML = '';
       if (!list.includes(currentFilterGroup)) currentFilterGroup = '全部';
 
       list.forEach(item => {
         const div = document.createElement('div');
         div.innerText = item;
         div.id = `filter-${item}`;
-        div.onclick = () => switchSubFilter(item, list);
+        div.onclick = () => {
+          currentFilterGroup = item;
+          list.forEach(x => {
+            const el = document.getElementById(`filter-${x}`);
+            if (el) {
+              el.className = (x === currentFilterGroup)
+                ? "px-3 py-1 text-xs font-bold bg-slate-800 text-white rounded-full cursor-pointer select-none transition-all duration-200 whitespace-nowrap shadow-2xs"
+                : "px-3 py-1 text-xs font-semibold text-slate-500 bg-white border border-slate-200/60 rounded-full cursor-pointer select-none hover:bg-slate-55 transition-all duration-200 whitespace-nowrap";
+            }
+          });
+          onFilterChange(item);
+        };
         div.className = (item === currentFilterGroup)
           ? "px-3 py-1 text-xs font-bold bg-slate-800 text-white rounded-full cursor-pointer select-none transition-all duration-200 whitespace-nowrap shadow-2xs"
           : "px-3 py-1 text-xs font-semibold text-slate-500 bg-white border border-slate-200/60 rounded-full cursor-pointer select-none hover:bg-slate-55 transition-all duration-200 whitespace-nowrap";
         subCtrl.appendChild(div);
       });
-    }
-
-    // 篩選器切換
-    function switchSubFilter(target, list) {
-      currentFilterGroup = target;
-      list.forEach(item => {
-        const el = document.getElementById(`filter-${item}`);
-        if(el) {
-          el.className = (item === target)
-            ? "px-3 py-1 text-xs font-bold bg-slate-800 text-white rounded-full cursor-pointer select-none transition-all duration-200 whitespace-nowrap shadow-2xs"
-            : "px-3 py-1 text-xs font-semibold text-slate-500 bg-white border border-slate-200/60 rounded-full cursor-pointer select-none hover:bg-slate-55 transition-all duration-200 whitespace-nowrap";
-        }
-      });
-      if (currentTab === 'packing') renderPacking();
-      else if (currentTab === 'shopping') renderShopping();
     }
 
     function renderCurrentTab() {
@@ -374,6 +406,14 @@
       let orderedDays = [...activeDays, ...completedDays];
 
       anchorBar.innerHTML = '';
+      
+      // Prepend "➕ 新增行程" button to Itinerary Day list
+      const addBtn = document.createElement('button');
+      addBtn.onclick = () => openItineraryModal();
+      addBtn.className = "px-3 py-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 rounded-full cursor-pointer select-none whitespace-nowrap shadow-3xs transition-all active:scale-95 flex items-center space-x-1 flex-shrink-0 mr-1.5";
+      addBtn.innerHTML = `<span>➕</span><span>新增行程</span>`;
+      anchorBar.appendChild(addBtn);
+
       if (orderedDays.length > 0) {
         orderedDays.forEach(dayInfo => {
           const btn = document.createElement('button');
@@ -453,7 +493,10 @@
               </div>
             </div>
           </div>
-          <div class="flex items-center justify-center pl-2 h-full">
+          <div class="flex items-center justify-center pl-2 h-full space-x-1.5 flex-shrink-0">
+            <button onclick="openItineraryModal(${item.rowIndex})" class="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all focus:outline-none flex items-center justify-center cursor-pointer active:scale-90" title="編輯">
+              <span class="text-xs leading-none select-none">✎</span>
+            </button>
             <input type="checkbox" ${item.isVisited ? 'checked' : ''} onclick="toggleArchive(${item.rowIndex}, '${safeDayId}', this)" class="w-5.5 h-5.5 rounded-md border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer transition-transform duration-100 active:scale-90">
           </div>
         `;
@@ -490,7 +533,10 @@
             <h3 class="text-base font-extrabold text-slate-955 leading-tight ${item.isDone ? 'line-through text-slate-400' : ''}">${item.task}</h3>
             ${item.note ? `<p class="text-sm text-slate-500 font-medium mt-2.5 leading-relaxed">${item.note}</p>` : ''}
           </div>
-          <div class="flex items-center justify-center pl-2">
+          <div class="flex items-center justify-center pl-2 flex-shrink-0 space-x-1.5 h-full">
+            <button onclick="openTodoModal(${item.rowIndex})" class="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all focus:outline-none flex items-center justify-center cursor-pointer active:scale-90" title="編輯">
+              <span class="text-xs leading-none select-none">✎</span>
+            </button>
             <input type="checkbox" ${item.isDone ? 'checked' : ''} onclick="toggleTodoArchive(${item.rowIndex}, this)" class="w-5.5 h-5.5 rounded-md border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer transition-transform duration-100 active:scale-90">
           </div>
         `;
@@ -536,7 +582,10 @@
             <h3 class="text-base font-extrabold text-slate-955 leading-tight ${item.isPacked ? 'line-through text-slate-400' : ''}">${item.item}</h3>
             ${item.note ? `<p class="text-sm text-slate-500 font-medium mt-2.5 leading-relaxed">${item.note}</p>` : ''}
           </div>
-          <div class="flex items-center justify-center pl-2">
+          <div class="flex items-center justify-center pl-2 flex-shrink-0 space-x-1.5 h-full">
+            <button onclick="openPackingModal(${item.rowIndex})" class="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all focus:outline-none flex items-center justify-center cursor-pointer active:scale-90" title="編輯">
+              <span class="text-xs leading-none select-none">✎</span>
+            </button>
             <input type="checkbox" ${item.isPacked ? 'checked' : ''} onclick="togglePackingArchive(${item.rowIndex}, this)" class="w-5.5 h-5.5 rounded-md border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer transition-transform duration-100 active:scale-90">
           </div>
         `;
@@ -962,7 +1011,10 @@
               </div>
             </div>
           </div>
-          <div class="flex items-center justify-center pl-2 flex-shrink-0">
+          <div class="flex items-center justify-center pl-2 flex-shrink-0 space-x-1.5 h-full">
+            <button onclick="openShoppingModal(${item.rowIndex})" class="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all focus:outline-none flex items-center justify-center cursor-pointer active:scale-90" title="編輯">
+              <span class="text-xs leading-none select-none">✎</span>
+            </button>
             <input type="checkbox" ${item.isDone ? 'checked' : ''} onclick="toggleShoppingArchive(${item.rowIndex}, this)" class="w-5.5 h-5.5 rounded-md border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer transition-transform duration-100 active:scale-90">
           </div>
         `;
@@ -1183,5 +1235,805 @@
         if (origin) item.isDone = origin.isDone;
       });
       renderShopping();
+    }
+
+    // === Modal Animations ===
+    function animateModalOpen(modalId) {
+      const modal = document.getElementById(modalId);
+      if (!modal) return;
+      modal.classList.remove('hidden');
+      requestAnimationFrame(() => {
+        modal.classList.remove('opacity-0');
+        const dialog = modal.querySelector('div');
+        if (dialog) dialog.classList.remove('translate-y-10');
+      });
+    }
+
+    function animateModalClose(modalId) {
+      const modal = document.getElementById(modalId);
+      if (!modal) return;
+      modal.classList.add('opacity-0');
+      const dialog = modal.querySelector('div');
+      if (dialog) dialog.classList.add('translate-y-10');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+      }, 200);
+    }
+
+    // === Itinerary Modal Controllers ===
+    function openItineraryModal(rowIndex = null) {
+      const form = document.getElementById('itinerary-form');
+      if (!form) return;
+      form.reset();
+      
+      const titleEl = document.getElementById('itinerary-modal-title');
+      const deleteBtn = document.getElementById('iti-delete-btn');
+      
+      if (!rowIndex) {
+        document.getElementById('iti-rowIndex').value = "";
+        document.getElementById('iti-isVisited').value = "false";
+        
+        let defaultDay = "Day 1";
+        if (itineraryData.length > 0) {
+          defaultDay = itineraryData[itineraryData.length - 1].day;
+        }
+        document.getElementById('iti-day').value = defaultDay;
+        document.getElementById('iti-time').value = "";
+        document.getElementById('iti-type').value = "景點";
+        document.getElementById('iti-title').value = "";
+        document.getElementById('iti-content').value = "";
+        document.getElementById('iti-links').value = "";
+        
+        if (titleEl) titleEl.innerText = "新增行程項目";
+        if (deleteBtn) deleteBtn.classList.add('hidden');
+      } else {
+        const item = itineraryData.find(x => x.rowIndex === rowIndex);
+        if (!item) return;
+        
+        document.getElementById('iti-rowIndex').value = item.rowIndex;
+        document.getElementById('iti-isVisited').value = item.isVisited;
+        document.getElementById('iti-day').value = item.day || "";
+        document.getElementById('iti-time').value = item.time || "";
+        document.getElementById('iti-type').value = item.type || "景點";
+        document.getElementById('iti-title').value = item.title || "";
+        document.getElementById('iti-content').value = (item.content || "").replace(/<br>/g, '\n');
+        document.getElementById('iti-links').value = item.links || "";
+        
+        if (titleEl) titleEl.innerText = "編輯行程項目";
+        if (deleteBtn) deleteBtn.classList.remove('hidden');
+      }
+      
+      animateModalOpen('modal-itinerary');
+    }
+
+    function closeItineraryModal() {
+      animateModalClose('modal-itinerary');
+    }
+
+    function submitItineraryForm() {
+      const rowIndexVal = document.getElementById('iti-rowIndex').value;
+      const rowIndex = rowIndexVal ? parseInt(rowIndexVal) : 0;
+      const isVisited = document.getElementById('iti-isVisited').value === "true" || document.getElementById('iti-isVisited').value === true;
+      const day = document.getElementById('iti-day').value.trim();
+      const time = document.getElementById('iti-time').value.trim();
+      const type = document.getElementById('iti-type').value;
+      const title = document.getElementById('iti-title').value.trim();
+      const content = document.getElementById('iti-content').value.trim();
+      const links = document.getElementById('iti-links').value.trim();
+      
+      if (!day || !title) {
+        showToast("請填寫天數與名稱/標題", "error");
+        return;
+      }
+      
+      const saveBtn = document.getElementById('iti-save-btn');
+      if (saveBtn) {
+        saveBtn.innerText = "儲存中...";
+        saveBtn.style.pointerEvents = "none";
+        saveBtn.classList.add('opacity-50');
+      }
+      
+      const backup = JSON.parse(JSON.stringify(itineraryData));
+      
+      const formData = {
+        rowIndex: rowIndex,
+        isVisited: isVisited,
+        day: day,
+        time: time,
+        type: type,
+        title: title,
+        content: content,
+        links: links
+      };
+      
+      const contentHtml = content.replace(/\n/g, '<br>');
+      let routingPlace = "";
+      if (links) {
+        routingPlace = extractPlaceForRouting(links, title);
+      }
+      
+      if (rowIndex > 1) {
+        itineraryData = itineraryData.map(item => {
+          if (item.rowIndex === rowIndex) {
+            return {
+              ...item,
+              day: day,
+              time: time,
+              type: type,
+              title: title,
+              content: contentHtml,
+              links: links,
+              routingPlace: routingPlace
+            };
+          }
+          return item;
+        });
+      } else {
+        const newItem = {
+          rowIndex: -1,
+          day: day,
+          date: "",
+          time: time,
+          type: type,
+          title: title,
+          content: contentHtml,
+          links: links,
+          routingPlace: routingPlace,
+          isVisited: isVisited
+        };
+        itineraryData.push(newItem);
+      }
+      
+      const sortDaysFn = (a, b) => {
+        const numA = parseInt(a.day.replace(/[^0-9]/g, '')) || 999;
+        const numB = parseInt(b.day.replace(/[^0-9]/g, '')) || 999;
+        if (numA !== numB) return numA - numB;
+        return a.rowIndex - b.rowIndex;
+      };
+      itineraryData.sort(sortDaysFn);
+      
+      renderItinerary();
+      closeItineraryModal();
+      showToast("儲存成功，正在同步至 Sheet...");
+      
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (saveBtn) {
+            saveBtn.innerText = "儲存";
+            saveBtn.style.pointerEvents = "auto";
+            saveBtn.classList.remove('opacity-50');
+          }
+          if (res === "Success") {
+            google.script.run
+              .withSuccessHandler(function(response) {
+                if (response && response.itinerary) {
+                  itineraryData = response.itinerary;
+                  if (currentTab === 'itinerary') renderItinerary();
+                }
+              })
+              .getAllData();
+          } else {
+            itineraryData = backup;
+            renderItinerary();
+            showToast("伺服器同步失敗: " + res, "error");
+          }
+        })
+        .withFailureHandler(function(err) {
+          if (saveBtn) {
+            saveBtn.innerText = "儲存";
+            saveBtn.style.pointerEvents = "auto";
+            saveBtn.classList.remove('opacity-50');
+          }
+          itineraryData = backup;
+          renderItinerary();
+          showToast("網路異常: " + err.message, "error");
+        })
+        .saveItineraryData(formData);
+    }
+
+    function deleteItinerary() {
+      const rowIndexVal = document.getElementById('iti-rowIndex').value;
+      const rowIndex = rowIndexVal ? parseInt(rowIndexVal) : 0;
+      if (rowIndex <= 1) return;
+      
+      if (!confirm("確定要刪除此行程項目嗎？")) return;
+      
+      closeItineraryModal();
+      const backup = JSON.parse(JSON.stringify(itineraryData));
+      
+      itineraryData = itineraryData.filter(item => item.rowIndex !== rowIndex);
+      renderItinerary();
+      showToast("正在從 Sheet 刪除...");
+      
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res === "Success") {
+            google.script.run
+              .withSuccessHandler(function(response) {
+                if (response && response.itinerary) {
+                  itineraryData = response.itinerary;
+                  if (currentTab === 'itinerary') renderItinerary();
+                }
+              })
+              .getAllData();
+            showToast("刪除成功");
+          } else {
+            itineraryData = backup;
+            renderItinerary();
+            showToast("刪除失敗: " + res, "error");
+          }
+        })
+        .withFailureHandler(function(err) {
+          itineraryData = backup;
+          renderItinerary();
+          showToast("網路異常: " + err.message, "error");
+        })
+        .deleteItineraryData(rowIndex);
+    }
+
+    // === Todo Modal Controllers ===
+    function openTodoModal(rowIndex = null) {
+      const form = document.getElementById('todo-form');
+      if (!form) return;
+      form.reset();
+      
+      const titleEl = document.getElementById('todo-modal-title');
+      const deleteBtn = document.getElementById('todo-delete-btn');
+      
+      if (!rowIndex) {
+        document.getElementById('todo-rowIndex').value = "";
+        document.getElementById('todo-isDone').value = "false";
+        
+        let defaultCat = "行前準備";
+        if (todoData.length > 0) {
+          defaultCat = todoData[todoData.length - 1].category;
+        }
+        document.getElementById('todo-category').value = defaultCat;
+        document.getElementById('todo-task').value = "";
+        document.getElementById('todo-note').value = "";
+        
+        if (titleEl) titleEl.innerText = "新增待辦事項";
+        if (deleteBtn) deleteBtn.classList.add('hidden');
+      } else {
+        const item = todoData.find(x => x.rowIndex === rowIndex);
+        if (!item) return;
+        
+        document.getElementById('todo-rowIndex').value = item.rowIndex;
+        document.getElementById('todo-isDone').value = item.isDone;
+        document.getElementById('todo-category').value = item.category || "";
+        document.getElementById('todo-task').value = item.task || "";
+        document.getElementById('todo-note').value = item.note || "";
+        
+        if (titleEl) titleEl.innerText = "編輯待辦事項";
+        if (deleteBtn) deleteBtn.classList.remove('hidden');
+      }
+      
+      animateModalOpen('modal-todo');
+    }
+
+    function closeTodoModal() {
+      animateModalClose('modal-todo');
+    }
+
+    function submitTodoForm() {
+      const rowIndexVal = document.getElementById('todo-rowIndex').value;
+      const rowIndex = rowIndexVal ? parseInt(rowIndexVal) : 0;
+      const isDone = document.getElementById('todo-isDone').value === "true" || document.getElementById('todo-isDone').value === true;
+      const category = document.getElementById('todo-category').value.trim();
+      const task = document.getElementById('todo-task').value.trim();
+      const note = document.getElementById('todo-note').value.trim();
+      
+      if (!category || !task) {
+        showToast("請填寫分類與待辦任務", "error");
+        return;
+      }
+      
+      const saveBtn = document.getElementById('todo-save-btn');
+      if (saveBtn) {
+        saveBtn.innerText = "儲存中...";
+        saveBtn.style.pointerEvents = "none";
+        saveBtn.classList.add('opacity-50');
+      }
+      
+      const backup = JSON.parse(JSON.stringify(todoData));
+      
+      const formData = {
+        rowIndex: rowIndex,
+        isDone: isDone,
+        category: category,
+        task: task,
+        note: note
+      };
+      
+      if (rowIndex > 1) {
+        todoData = todoData.map(item => {
+          if (item.rowIndex === rowIndex) {
+            return {
+              ...item,
+              category: category,
+              task: task,
+              note: note
+            };
+          }
+          return item;
+        });
+      } else {
+        const newItem = {
+          rowIndex: -1,
+          category: category,
+          task: task,
+          note: note,
+          isDone: isDone
+        };
+        todoData.push(newItem);
+      }
+      
+      renderTodo();
+      closeTodoModal();
+      showToast("儲存成功，正在同步至 Sheet...");
+      
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (saveBtn) {
+            saveBtn.innerText = "儲存";
+            saveBtn.style.pointerEvents = "auto";
+            saveBtn.classList.remove('opacity-50');
+          }
+          if (res === "Success") {
+            google.script.run
+              .withSuccessHandler(function(response) {
+                if (response && response.todo) {
+                  todoData = response.todo;
+                  if (currentTab === 'todo') renderTodo();
+                }
+              })
+              .getAllData();
+          } else {
+            todoData = backup;
+            renderTodo();
+            showToast("伺服器同步失敗: " + res, "error");
+          }
+        })
+        .withFailureHandler(function(err) {
+          if (saveBtn) {
+            saveBtn.innerText = "儲存";
+            saveBtn.style.pointerEvents = "auto";
+            saveBtn.classList.remove('opacity-50');
+          }
+          todoData = backup;
+          renderTodo();
+          showToast("網路異常: " + err.message, "error");
+        })
+        .saveTodoData(formData);
+    }
+
+    function deleteTodo() {
+      const rowIndexVal = document.getElementById('todo-rowIndex').value;
+      const rowIndex = rowIndexVal ? parseInt(rowIndexVal) : 0;
+      if (rowIndex <= 1) return;
+      
+      if (!confirm("確定要刪除此待辦事項嗎？")) return;
+      
+      closeTodoModal();
+      const backup = JSON.parse(JSON.stringify(todoData));
+      
+      todoData = todoData.filter(item => item.rowIndex !== rowIndex);
+      renderTodo();
+      showToast("正在從 Sheet 刪除...");
+      
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res === "Success") {
+            google.script.run
+              .withSuccessHandler(function(response) {
+                if (response && response.todo) {
+                  todoData = response.todo;
+                  if (currentTab === 'todo') renderTodo();
+                }
+              })
+              .getAllData();
+            showToast("刪除成功");
+          } else {
+            todoData = backup;
+            renderTodo();
+            showToast("刪除失敗: " + res, "error");
+          }
+        })
+        .withFailureHandler(function(err) {
+          todoData = backup;
+          renderTodo();
+          showToast("網路異常: " + err.message, "error");
+        })
+        .deleteTodoData(rowIndex);
+    }
+
+    // === Packing Modal Controllers ===
+    function openPackingModal(rowIndex = null) {
+      const form = document.getElementById('packing-form');
+      if (!form) return;
+      form.reset();
+      
+      const titleEl = document.getElementById('packing-modal-title');
+      const deleteBtn = document.getElementById('packing-delete-btn');
+      
+      if (!rowIndex) {
+        document.getElementById('packing-rowIndex').value = "";
+        document.getElementById('packing-isPacked').value = "false";
+        
+        let defaultCat = "衣物";
+        let defaultPerson = "公用";
+        if (packingData.length > 0) {
+          defaultCat = packingData[packingData.length - 1].category;
+          defaultPerson = packingData[packingData.length - 1].person;
+        }
+        document.getElementById('packing-category').value = defaultCat;
+        document.getElementById('packing-person').value = defaultPerson;
+        document.getElementById('packing-item').value = "";
+        document.getElementById('packing-note').value = "";
+        
+        if (titleEl) titleEl.innerText = "新增打包行李";
+        if (deleteBtn) deleteBtn.classList.add('hidden');
+      } else {
+        const item = packingData.find(x => x.rowIndex === rowIndex);
+        if (!item) return;
+        
+        document.getElementById('packing-rowIndex').value = item.rowIndex;
+        document.getElementById('packing-isPacked').value = item.isPacked;
+        document.getElementById('packing-category').value = item.category || "";
+        document.getElementById('packing-person').value = item.person || "";
+        document.getElementById('packing-item').value = item.item || "";
+        document.getElementById('packing-note').value = item.note || "";
+        
+        if (titleEl) titleEl.innerText = "編輯打包行李";
+        if (deleteBtn) deleteBtn.classList.remove('hidden');
+      }
+      
+      animateModalOpen('modal-packing');
+    }
+
+    function closePackingModal() {
+      animateModalClose('modal-packing');
+    }
+
+    function submitPackingForm() {
+      const rowIndexVal = document.getElementById('packing-rowIndex').value;
+      const rowIndex = rowIndexVal ? parseInt(rowIndexVal) : 0;
+      const isPacked = document.getElementById('packing-isPacked').value === "true" || document.getElementById('packing-isPacked').value === true;
+      const category = document.getElementById('packing-category').value.trim();
+      const person = document.getElementById('packing-person').value.trim();
+      const item = document.getElementById('packing-item').value.trim();
+      const note = document.getElementById('packing-note').value.trim();
+      
+      if (!category || !person || !item) {
+        showToast("請填寫分類、準備人與物品名稱", "error");
+        return;
+      }
+      
+      const saveBtn = document.getElementById('packing-save-btn');
+      if (saveBtn) {
+        saveBtn.innerText = "儲存中...";
+        saveBtn.style.pointerEvents = "none";
+        saveBtn.classList.add('opacity-50');
+      }
+      
+      const backup = JSON.parse(JSON.stringify(packingData));
+      
+      const formData = {
+        rowIndex: rowIndex,
+        isPacked: isPacked,
+        category: category,
+        person: person,
+        item: item,
+        note: note
+      };
+      
+      if (rowIndex > 1) {
+        packingData = packingData.map(x => {
+          if (x.rowIndex === rowIndex) {
+            return {
+              ...x,
+              category: category,
+              person: person,
+              item: item,
+              note: note
+            };
+          }
+          return x;
+        });
+      } else {
+        const newItem = {
+          rowIndex: -1,
+          category: category,
+          person: person,
+          item: item,
+          note: note,
+          isPacked: isPacked
+        };
+        packingData.push(newItem);
+      }
+      
+      renderPacking();
+      closePackingModal();
+      showToast("儲存成功，正在同步至 Sheet...");
+      
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (saveBtn) {
+            saveBtn.innerText = "儲存";
+            saveBtn.style.pointerEvents = "auto";
+            saveBtn.classList.remove('opacity-50');
+          }
+          if (res === "Success") {
+            google.script.run
+              .withSuccessHandler(function(response) {
+                if (response && response.packing) {
+                  packingData = response.packing;
+                  updateSubControlMenu();
+                  if (currentTab === 'packing') renderPacking();
+                }
+              })
+              .getAllData();
+          } else {
+            packingData = backup;
+            renderPacking();
+            showToast("伺服器同步失敗: " + res, "error");
+          }
+        })
+        .withFailureHandler(function(err) {
+          if (saveBtn) {
+            saveBtn.innerText = "儲存";
+            saveBtn.style.pointerEvents = "auto";
+            saveBtn.classList.remove('opacity-50');
+          }
+          packingData = backup;
+          renderPacking();
+          showToast("網路異常: " + err.message, "error");
+        })
+        .savePackingData(formData);
+    }
+
+    function deletePacking() {
+      const rowIndexVal = document.getElementById('packing-rowIndex').value;
+      const rowIndex = rowIndexVal ? parseInt(rowIndexVal) : 0;
+      if (rowIndex <= 1) return;
+      
+      if (!confirm("確定要刪除此物品嗎？")) return;
+      
+      closePackingModal();
+      const backup = JSON.parse(JSON.stringify(packingData));
+      
+      packingData = packingData.filter(item => item.rowIndex !== rowIndex);
+      renderPacking();
+      showToast("正在從 Sheet 刪除...");
+      
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res === "Success") {
+            google.script.run
+              .withSuccessHandler(function(response) {
+                if (response && response.packing) {
+                  packingData = response.packing;
+                  updateSubControlMenu();
+                  if (currentTab === 'packing') renderPacking();
+                }
+              })
+              .getAllData();
+            showToast("刪除成功");
+          } else {
+            packingData = backup;
+            renderPacking();
+            showToast("刪除失敗: " + res, "error");
+          }
+        })
+        .withFailureHandler(function(err) {
+          packingData = backup;
+          renderPacking();
+          showToast("網路異常: " + err.message, "error");
+        })
+        .deletePackingData(rowIndex);
+    }
+
+    // === Shopping Modal Controllers ===
+    function openShoppingModal(rowIndex = null) {
+      const form = document.getElementById('shopping-form');
+      if (!form) return;
+      form.reset();
+      
+      const titleEl = document.getElementById('shopping-modal-title');
+      const deleteBtn = document.getElementById('shop-delete-btn');
+      
+      if (!rowIndex) {
+        document.getElementById('shop-rowIndex').value = "";
+        document.getElementById('shop-isDone').value = "false";
+        
+        let defaultStore = "Costco";
+        let defaultFor = "公用";
+        if (shoppingData.length > 0) {
+          defaultStore = shoppingData[shoppingData.length - 1].store;
+          defaultFor = shoppingData[shoppingData.length - 1].forWhom;
+        }
+        document.getElementById('shop-store').value = defaultStore;
+        document.getElementById('shop-forWhom').value = defaultFor;
+        document.getElementById('shop-item').value = "";
+        document.getElementById('shop-quantity').value = "1";
+        document.getElementById('shop-image').value = "";
+        document.getElementById('shop-url').value = "";
+        document.getElementById('shop-note').value = "";
+        
+        if (titleEl) titleEl.innerText = "新增購物項目";
+        if (deleteBtn) deleteBtn.classList.add('hidden');
+      } else {
+        const item = shoppingData.find(x => x.rowIndex === rowIndex);
+        if (!item) return;
+        
+        document.getElementById('shop-rowIndex').value = item.rowIndex;
+        document.getElementById('shop-isDone').value = item.isDone;
+        document.getElementById('shop-store').value = item.store || "";
+        document.getElementById('shop-forWhom').value = item.forWhom || "";
+        document.getElementById('shop-item').value = item.item || "";
+        document.getElementById('shop-quantity').value = item.quantity || "1";
+        document.getElementById('shop-image').value = item.image || "";
+        document.getElementById('shop-url').value = item.url || "";
+        document.getElementById('shop-note').value = item.note || "";
+        
+        if (titleEl) titleEl.innerText = "編輯購物項目";
+        if (deleteBtn) deleteBtn.classList.remove('hidden');
+      }
+      
+      animateModalOpen('modal-shopping');
+    }
+
+    function closeShoppingModal() {
+      animateModalClose('modal-shopping');
+    }
+
+    function submitShoppingForm() {
+      const rowIndexVal = document.getElementById('shop-rowIndex').value;
+      const rowIndex = rowIndexVal ? parseInt(rowIndexVal) : 0;
+      const isDone = document.getElementById('shop-isDone').value === "true" || document.getElementById('shop-isDone').value === true;
+      const store = document.getElementById('shop-store').value.trim();
+      const forWhom = document.getElementById('shop-forWhom').value.trim();
+      const item = document.getElementById('shop-item').value.trim();
+      const quantity = document.getElementById('shop-quantity').value.trim();
+      const image = document.getElementById('shop-image').value.trim();
+      const url = document.getElementById('shop-url').value.trim();
+      const note = document.getElementById('shop-note').value.trim();
+      
+      if (!store || !forWhom || !item || !quantity) {
+        showToast("請填寫商店、購買對象、物品名稱與數量", "error");
+        return;
+      }
+      
+      const saveBtn = document.getElementById('shop-save-btn');
+      if (saveBtn) {
+        saveBtn.innerText = "儲存中...";
+        saveBtn.style.pointerEvents = "none";
+        saveBtn.classList.add('opacity-50');
+      }
+      
+      const backup = JSON.parse(JSON.stringify(shoppingData));
+      
+      const formData = {
+        rowIndex: rowIndex,
+        isDone: isDone,
+        store: store,
+        forWhom: forWhom,
+        item: item,
+        quantity: quantity,
+        image: image,
+        url: url,
+        note: note
+      };
+      
+      if (rowIndex > 1) {
+        shoppingData = shoppingData.map(x => {
+          if (x.rowIndex === rowIndex) {
+            return {
+              ...x,
+              store: store,
+              forWhom: forWhom,
+              item: item,
+              quantity: quantity,
+              image: image,
+              url: url,
+              note: note
+            };
+          }
+          return x;
+        });
+      } else {
+        const newItem = {
+          rowIndex: -1,
+          store: store,
+          forWhom: forWhom,
+          item: item,
+          quantity: quantity,
+          image: image,
+          url: url,
+          note: note,
+          isDone: isDone
+        };
+        shoppingData.push(newItem);
+      }
+      
+      renderShopping();
+      closeShoppingModal();
+      showToast("儲存成功，正在同步至 Sheet...");
+      
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (saveBtn) {
+            saveBtn.innerText = "儲存";
+            saveBtn.style.pointerEvents = "auto";
+            saveBtn.classList.remove('opacity-50');
+          }
+          if (res === "Success") {
+            google.script.run
+              .withSuccessHandler(function(response) {
+                if (response && response.shopping) {
+                  shoppingData = response.shopping;
+                  updateSubControlMenu();
+                  if (currentTab === 'shopping') renderShopping();
+                }
+              })
+              .getAllData();
+          } else {
+            shoppingData = backup;
+            renderShopping();
+            showToast("伺服器同步失敗: " + res, "error");
+          }
+        })
+        .withFailureHandler(function(err) {
+          if (saveBtn) {
+            saveBtn.innerText = "儲存";
+            saveBtn.style.pointerEvents = "auto";
+            saveBtn.classList.remove('opacity-50');
+          }
+          shoppingData = backup;
+          renderShopping();
+          showToast("網路異常: " + err.message, "error");
+        })
+        .saveShoppingData(formData);
+    }
+
+    function deleteShopping() {
+      const rowIndexVal = document.getElementById('shop-rowIndex').value;
+      const rowIndex = rowIndexVal ? parseInt(rowIndexVal) : 0;
+      if (rowIndex <= 1) return;
+      
+      if (!confirm("確定要刪除此購物項目嗎？")) return;
+      
+      closeShoppingModal();
+      const backup = JSON.parse(JSON.stringify(shoppingData));
+      
+      shoppingData = shoppingData.filter(item => item.rowIndex !== rowIndex);
+      renderShopping();
+      showToast("正在從 Sheet 刪除...");
+      
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res === "Success") {
+            google.script.run
+              .withSuccessHandler(function(response) {
+                if (response && response.shopping) {
+                  shoppingData = response.shopping;
+                  updateSubControlMenu();
+                  if (currentTab === 'shopping') renderShopping();
+                }
+              })
+              .getAllData();
+            showToast("刪除成功");
+          } else {
+            shoppingData = backup;
+            renderShopping();
+            showToast("刪除失敗: " + res, "error");
+          }
+        })
+        .withFailureHandler(function(err) {
+          shoppingData = backup;
+          renderShopping();
+          showToast("網路異常: " + err.message, "error");
+        })
+        .deleteShoppingData(rowIndex);
     }
   </script>
