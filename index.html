@@ -46,7 +46,15 @@
                 return function(...args) {
                   const token = localStorage.getItem('la_trip_api_token') || '';
                   const defaultUrl = "https://script.google.com/macros/s/AKfycbwuT0HjqVqIpY9fO-zHC9xuG_U6et5AsYE9qkhR8_PqvLG3vTWdxRGERLbeEXzo4iUQ/exec";
-                  const scriptUrl = localStorage.getItem('la_trip_api_url') || defaultUrl;
+                  let scriptUrl = localStorage.getItem('la_trip_api_url') || '';
+                  
+                  // 自動驗證與修正：若發現快取中為不正確/過期的 Apps Script 網址，自動清除並套用預設網址
+                  if (scriptUrl && (!scriptUrl.includes('/macros/s/') || !scriptUrl.includes('/exec'))) {
+                    localStorage.removeItem('la_trip_api_url');
+                    scriptUrl = defaultUrl;
+                  } else if (!scriptUrl) {
+                    scriptUrl = defaultUrl;
+                  }
 
                   const requestBody = {
                     action: propKey,
@@ -106,30 +114,35 @@
       }
     };
 
-    // ⚙️ API 設定 Prompt
+    // ⚙️ API 設定 Prompt (簡化為僅詢問認證金鑰)
     function openSettingsPrompt() {
-      const currentUrl = localStorage.getItem('la_trip_api_url') || '';
       const currentToken = localStorage.getItem('la_trip_api_token') || '';
       
-      const newUrl = prompt("請輸入 Google Apps Script Web App 網址：\n(如：https://script.google.com/macros/s/.../exec)", currentUrl);
-      if (newUrl !== null) {
-        localStorage.setItem('la_trip_api_url', newUrl.trim());
+      const newToken = prompt("請輸入認證金鑰 (API Token / 暗號)：\n(若無設定請直接留空按確定)", currentToken);
+      if (newToken !== null) {
+        const trimmedToken = newToken.trim();
         
-        const newToken = prompt("請輸入認證金鑰 (API Token / 暗號)：\n(若無設定請留空)", currentToken);
-        if (newToken !== null) {
-          localStorage.setItem('la_trip_api_token', newToken.trim());
-          
-          if (typeof showToast === 'function') {
-            showToast("API 設定已儲存，正在重新載入資料...");
-          } else {
-            alert("API 設定已儲存，正在重新載入資料...");
+        // 隱藏進階功能：如果輸入 RESET_URL 可以手動更改/覆蓋 API 網址
+        if (trimmedToken === 'RESET_URL') {
+          const currentUrl = localStorage.getItem('la_trip_api_url') || '';
+          const newUrl = prompt("【進階】請輸入新的 Google Apps Script Web App 網址：", currentUrl);
+          if (newUrl !== null) {
+            localStorage.setItem('la_trip_api_url', newUrl.trim());
           }
-          
-          if (typeof handleRefresh === 'function') {
-            handleRefresh();
-          } else {
-            location.reload();
-          }
+        } else {
+          localStorage.setItem('la_trip_api_token', trimmedToken);
+        }
+        
+        if (typeof showToast === 'function') {
+          showToast("API 設定已儲存，正在重新載入資料...");
+        } else {
+          alert("API 設定已儲存，正在重新載入資料...");
+        }
+        
+        if (typeof handleRefresh === 'function') {
+          handleRefresh();
+        } else {
+          location.reload();
         }
       }
     }
