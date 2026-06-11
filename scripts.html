@@ -283,9 +283,18 @@
       validTabs.forEach(key => {
         const el = document.getElementById(`tab-${key}`);
         if(el) {
-          el.className = (key === tab)
-            ? "px-3.5 py-1.5 text-sm font-bold bg-slate-900 text-white rounded-full transition-all duration-200 whitespace-nowrap shadow-xs active:scale-95"
-            : "px-3.5 py-1.5 text-sm font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-all duration-200 whitespace-nowrap active:scale-95";
+          const emojiSpan = el.querySelector('span:first-child');
+          const textSpan = el.querySelector('span:last-child');
+          
+          if (key === tab) {
+            el.className = "flex flex-col items-center justify-center flex-1 py-1 text-slate-900 transition-colors active:scale-95";
+            if (emojiSpan) emojiSpan.className = "text-xl transition-transform scale-110 duration-200";
+            if (textSpan) textSpan.className = "text-[10px] font-black mt-1.5 tracking-wider";
+          } else {
+            el.className = "flex flex-col items-center justify-center flex-1 py-1 text-slate-400 hover:text-slate-650 transition-colors active:scale-95";
+            if (emojiSpan) emojiSpan.className = "text-lg transition-transform scale-100 duration-200";
+            if (textSpan) textSpan.className = "text-[10px] font-medium mt-1.5 tracking-wider";
+          }
         }
       });
      
