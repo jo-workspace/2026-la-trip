@@ -965,7 +965,7 @@
       chartWrapper.innerHTML = `
         <button onclick="toggleExpenseChart()" class="flex items-center text-xs font-bold text-slate-400 hover:text-slate-600 uppercase tracking-wider mb-2 mt-2 pl-1 select-none cursor-pointer transition-colors outline-none">
           <span>📊 花費分類統計 (TWD)</span>
-          <span id="chart-arrow-icon" class="ml-1 text-[10px] inline-block transition-transform duration-200">▼</span>
+          <span id="chart-arrow-icon" class="ml-1 text-[10px] inline-block transition-transform duration-200" style="transform: rotate(-90deg);">▼</span>
         </button>
         <div id="expense-chart-content" class="max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
           <div class="mt-1 bg-white border border-slate-100 p-4.5 rounded-2xl shadow-3xs space-y-3.5">
@@ -1022,6 +1022,8 @@
             <!-- 左側：分類主題圓圈圖標 -->
             <div class="w-10 h-10 rounded-xl ${colorConfig.bg} ${colorConfig.text} flex items-center justify-center text-lg shadow-3xs mr-3 flex-shrink-0 select-none">
               ${icon}
+            </div>
+            
             <!-- 中間：品項名稱、付款與分攤資訊、備註 -->
             <div class="flex-1 min-w-0 pr-3">
               <h3 class="text-sm font-extrabold text-slate-800 truncate leading-tight">${exp.item}</h3>
@@ -1122,15 +1124,21 @@
 
     function getCategoryChartColors(cat) {
       const mapping = {
-        '🍔': { bar: 'bg-amber-500/80', label: 'text-amber-700', name: '美食', emoji: '🍔' },
-        '✈️': { bar: 'bg-blue-500/80', label: 'text-blue-700', name: '機票', emoji: '✈️' },
-        '🛒': { bar: 'bg-indigo-500/80', label: 'text-indigo-700', name: '購物', emoji: '🛒' },
-        '🚗': { bar: 'bg-sky-500/80', label: 'text-sky-700', name: '交通', emoji: '🚗' },
-        '⚾': { bar: 'bg-emerald-500/80', label: 'text-emerald-700', name: '球場', emoji: '⚾' },
-        '🏨': { bar: 'bg-rose-500/80', label: 'text-rose-700', name: '住宿', emoji: '🏨' },
-        '❔': { bar: 'bg-slate-500/80', label: 'text-slate-650', name: '其他', emoji: '❔' }
+        '🍔': { name: '美食', emoji: '🍔' },
+        '✈️': { name: '機票', emoji: '✈️' },
+        '🛒': { name: '購物', emoji: '🛒' },
+        '🚗': { name: '交通', emoji: '🚗' },
+        '⚾': { name: '球場', emoji: '⚾' },
+        '🏨': { name: '住宿', emoji: '🏨' },
+        '❔': { name: '其他', emoji: '❔' }
       };
-      return mapping[cat] || { bar: 'bg-slate-500/80', label: 'text-slate-650', name: cat, emoji: '❔' };
+      let info = mapping[cat] || { name: cat, emoji: '❔' };
+      return {
+        bar: 'bg-[#5a7384]',
+        label: 'text-slate-700',
+        name: info.name,
+        emoji: info.emoji
+      };
     }
 
     function toggleExpenseChart() {
@@ -1144,10 +1152,10 @@
       if (!content || !arrow) return;
       if (window.isExpenseChartExpanded) {
         content.style.maxHeight = content.scrollHeight + 'px';
-        arrow.style.transform = 'rotate(180deg)';
+        arrow.style.transform = 'rotate(0deg)';
       } else {
         content.style.maxHeight = '0px';
-        arrow.style.transform = 'rotate(0deg)';
+        arrow.style.transform = 'rotate(-90deg)';
       }
     }
 
