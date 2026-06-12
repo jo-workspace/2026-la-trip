@@ -775,10 +775,10 @@
       layoutGrid.className = "grid grid-cols-1 md:grid-cols-12 gap-6 items-start mt-2";
       
       const leftCol = document.createElement('div');
-      leftCol.className = "md:col-span-4 space-y-4";
+      leftCol.className = "md:col-span-5 space-y-4";
       
       const rightCol = document.createElement('div');
-      rightCol.className = "md:col-span-8 space-y-3";
+      rightCol.className = "md:col-span-7 space-y-3";
       
       layoutGrid.appendChild(leftCol);
       layoutGrid.appendChild(rightCol);
@@ -883,23 +883,27 @@
             <div onclick="setFormCategory('其他')" id="formcat-其他" class="w-full h-9 flex items-center justify-center text-xs font-black text-slate-200 rounded-lg cursor-pointer select-none transition-all whitespace-nowrap">其他</div>
           </div>
 
-          <!-- 付款與分攤優化：垂直標籤、擴大點擊、大寫姓名 -->
-          <div class="grid grid-cols-2 gap-3.5">
+          <!-- 付款與分攤優化：採用 5:7 網格比例（付款人 42%，分攤 58%），標籤置頂，使按鈕寬度近乎等寬且防擠壓 -->
+          <div class="grid grid-cols-12 gap-2">
             <!-- 付款人 -->
-            <div class="space-y-1">
-              <label class="block text-[10px] font-bold text-slate-300 tracking-wider uppercase pl-1">付款人</label>
+            <div class="col-span-5 space-y-1">
+              <label class="block text-[10px] font-bold text-slate-350 tracking-wider pl-1 select-none">付款人</label>
               <div class="flex p-1 rounded-xl bg-[#3d4f5b]/40 border border-white/5">
-                <div onclick="setFormPaidBy('Jo')" id="paid-Jo" class="flex-1 h-9 flex items-center justify-center text-xs font-black text-slate-200 rounded-lg cursor-pointer select-none transition-all hover:text-white uppercase tracking-wider">JO</div>
-                <div onclick="setFormPaidBy('Will')" id="paid-Will" class="flex-1 h-9 flex items-center justify-center text-xs font-black text-slate-200 rounded-lg cursor-pointer select-none transition-all hover:text-white uppercase tracking-wider">WILL</div>
+                <div class="flex flex-1 rounded-lg overflow-hidden bg-slate-900/20">
+                  <div onclick="setFormPaidBy('Jo')" id="paid-Jo" class="flex-1 h-7.5 flex items-center justify-center text-xs font-black text-slate-200 rounded cursor-pointer select-none transition-all hover:text-white uppercase tracking-wider">JO</div>
+                  <div onclick="setFormPaidBy('Will')" id="paid-Will" class="flex-1 h-7.5 flex items-center justify-center text-xs font-black text-slate-200 rounded cursor-pointer select-none transition-all hover:text-white uppercase tracking-wider">WILL</div>
+                </div>
               </div>
             </div>
             <!-- 分攤 -->
-            <div class="space-y-1">
-              <label class="block text-[10px] font-bold text-slate-300 tracking-wider uppercase pl-1">分攤</label>
+            <div class="col-span-7 space-y-1">
+              <label class="block text-[10px] font-bold text-slate-350 tracking-wider pl-1 select-none">分攤</label>
               <div class="flex p-1 rounded-xl bg-[#3d4f5b]/40 border border-white/5">
-                <div onclick="setFormSplit('公用')" id="split-公用" class="flex-1 h-9 flex items-center justify-center text-[11px] font-bold text-slate-200 rounded-lg cursor-pointer select-none transition-all hover:text-white">公用</div>
-                <div onclick="setFormSplit('Jo')" id="split-Jo" class="flex-1 h-9 flex items-center justify-center text-xs font-black text-slate-200 rounded-lg cursor-pointer select-none transition-all hover:text-white uppercase tracking-wider">JO</div>
-                <div onclick="setFormSplit('Will')" id="split-Will" class="flex-1 h-9 flex items-center justify-center text-xs font-black text-slate-200 rounded-lg cursor-pointer select-none transition-all hover:text-white uppercase tracking-wider">WILL</div>
+                <div class="flex flex-1 rounded-lg overflow-hidden bg-slate-900/20">
+                  <div onclick="setFormSplit('公用')" id="split-公用" class="flex-1 h-7.5 flex items-center justify-center text-[11px] font-bold text-slate-200 rounded cursor-pointer select-none transition-all hover:text-white">公用</div>
+                  <div onclick="setFormSplit('Jo')" id="split-Jo" class="flex-1 h-7.5 flex items-center justify-center text-xs font-black text-slate-200 rounded cursor-pointer select-none transition-all hover:text-white uppercase tracking-wider">JO</div>
+                  <div onclick="setFormSplit('Will')" id="split-Will" class="flex-1 h-7.5 flex items-center justify-center text-xs font-black text-slate-200 rounded cursor-pointer select-none transition-all hover:text-white uppercase tracking-wider">WILL</div>
+                </div>
               </div>
             </div>
           </div>
@@ -1022,11 +1026,11 @@
       const willEl = document.getElementById('paid-Will');
       if(joEl && willEl) {
         if (person === 'Jo') {
-          joEl.className = "flex-1 h-9 flex items-center justify-center text-xs font-black bg-white text-slate-800 rounded-lg cursor-pointer select-none transition-all shadow-3xs uppercase tracking-wider";
-          willEl.className = "flex-1 h-9 flex items-center justify-center text-xs font-black text-slate-200 rounded-lg cursor-pointer select-none transition-all hover:text-white uppercase tracking-wider";
+          joEl.className = "flex-1 h-7.5 flex items-center justify-center text-xs font-black bg-white text-slate-800 rounded cursor-pointer select-none transition-all shadow-3xs uppercase tracking-wider";
+          willEl.className = "flex-1 h-7.5 flex items-center justify-center text-xs font-black text-slate-200 rounded cursor-pointer select-none transition-all hover:text-white uppercase tracking-wider";
         } else {
-          joEl.className = "flex-1 h-9 flex items-center justify-center text-xs font-black text-slate-200 rounded-lg cursor-pointer select-none transition-all hover:text-white uppercase tracking-wider";
-          willEl.className = "flex-1 h-9 flex items-center justify-center text-xs font-black bg-white text-slate-800 rounded-lg cursor-pointer select-none transition-all shadow-3xs uppercase tracking-wider";
+          joEl.className = "flex-1 h-7.5 flex items-center justify-center text-xs font-black text-slate-200 rounded cursor-pointer select-none transition-all hover:text-white uppercase tracking-wider";
+          willEl.className = "flex-1 h-7.5 flex items-center justify-center text-xs font-black bg-white text-slate-800 rounded cursor-pointer select-none transition-all shadow-3xs uppercase tracking-wider";
         }
       }
     }
@@ -1042,9 +1046,9 @@
           const sizeClass = isName ? 'text-xs' : 'text-[11px]';
           const formatClass = isName ? 'font-black uppercase tracking-wider' : 'font-bold';
           if (p === type) {
-            el.className = `flex-1 h-9 flex items-center justify-center ${sizeClass} ${formatClass} bg-white text-slate-800 rounded-lg cursor-pointer select-none transition-all shadow-3xs`;
+            el.className = `flex-1 h-7.5 flex items-center justify-center ${sizeClass} ${formatClass} bg-white text-slate-800 rounded cursor-pointer select-none transition-all shadow-3xs`;
           } else {
-            el.className = `flex-1 h-9 flex items-center justify-center ${sizeClass} ${formatClass} text-slate-200 rounded-lg cursor-pointer select-none transition-all hover:text-white`;
+            el.className = `flex-1 h-7.5 flex items-center justify-center ${sizeClass} ${formatClass} text-slate-200 rounded cursor-pointer select-none transition-all hover:text-white`;
           }
         }
       });
