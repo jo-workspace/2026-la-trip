@@ -363,9 +363,15 @@
         <input type="hidden" id="todo-rowIndex">
         <input type="hidden" id="todo-isDone" value="false">
         <div class="mb-4">
-          <label class="block text-2xs font-extrabold text-slate-500 uppercase tracking-wider mb-1">分類 *</label>
-          <input type="text" id="todo-category" placeholder="如 機票簽證, 行前準備" required class="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold">
-        </div>
+  <label class="block text-2xs font-extrabold text-slate-500 uppercase tracking-wider mb-1">分類 *</label>
+  <select id="todo-category" required class="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold">
+    <option value="Phase 1: 即刻">Phase 1: 即刻</option>
+    <option value="Phase 2: 旅宿交通">Phase 2: 旅宿交通</option>
+    <option value="Phase 3: 7 月">Phase 3: 7 月</option>
+    <option value="Phase 4: Pre-Travel">Phase 4: Pre-Travel</option>
+    <option value="其他">其他</option>
+  </select>
+</div>
         <div class="mb-4">
           <label class="block text-2xs font-extrabold text-slate-500 uppercase tracking-wider mb-1">待辦任務 *</label>
           <input type="text" id="todo-task" placeholder="任務名稱..." required class="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold">
