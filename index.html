@@ -25,6 +25,27 @@
       })
       .catch(err => console.error("載入樣式失敗:", err));
 
+    function isInvalidTokenMessage(message) {
+      return /unauthorized/i.test(message || '') && /invalid token/i.test(message || '');
+    }
+
+    let authPromptOpen = false;
+
+    function handleApiAuthFailure(err) {
+      if (!isInvalidTokenMessage(err && err.message)) return false;
+      localStorage.removeItem('la_trip_api_token');
+
+      if (!authPromptOpen) {
+        authPromptOpen = true;
+        setTimeout(() => {
+          authPromptOpen = false;
+          openSettingsPrompt("認證金鑰無效或已過期，請重新輸入。");
+        }, 50);
+      }
+
+      return true;
+    }
+
     // 🧙‍♂️ 1. 建立萬能全局攔截器，模擬 Google Apps Script 執行環境
     window.google = {
       script: {
@@ -89,8 +110,10 @@
                     }
                     
                     if (res && (res.error || res.status === 'error')) {
+                      const err = new Error(res.error || "API 執行失敗");
+                      handleApiAuthFailure(err);
                       if (failureCb) {
-                        failureCb(new Error(res.error || "API 執行失敗"));
+                        failureCb(err);
                       }
                     } else {
                       if (successCb) {
@@ -101,6 +124,7 @@
                     }
                   })
                   .catch(err => {
+                    handleApiAuthFailure(err);
                     if (failureCb) {
                       failureCb(err);
                     } else {
@@ -117,10 +141,11 @@
     };
 
     // ⚙️ API 設定 Prompt (簡化為僅詢問認證金鑰)
-    function openSettingsPrompt() {
+    function openSettingsPrompt(reason) {
       const currentToken = localStorage.getItem('la_trip_api_token') || '';
       
-      const newToken = prompt("請輸入認證金鑰 (API Token / 暗號)：\n(若無設定請直接留空按確定)", currentToken);
+      const message = reason ? `${reason}\n\n` : '';
+      const newToken = prompt(`${message}請輸入認證金鑰 (API Token / 暗號)：\n(若無設定請直接留空按確定)`, currentToken);
       if (newToken !== null) {
         const trimmedToken = newToken.trim();
         
