@@ -19,7 +19,7 @@
     };
 
     const iconMapping = {
-      '航班': '✈️', '住宿': '🏨', '景點': '📍', '行程': '🗓️', '球場': '⚾', '交通': '🚗', '購物': '🛒', '美食': '🍔', '機票': '✈️', '其他': '❔'
+      '航班': '✈️', '住宿': '🏨', '景點': '🎡', '行程': '🗓️', '球場': '⚾', '交通': '🚗', '購物': '🛒', '美食': '🍔', '機票': '✈️', '其他': '❔'
     };
 
     function adjustStickyTops() {
@@ -546,9 +546,13 @@
       cardsList.innerHTML = '';
 
       let currentDay = "";
+      let currentGrid = null;
+      let renderedCount = 0;
 
       itineraryData.forEach(item => {
         if (hideVisited && item.isVisited) return;
+        renderedCount++;
+
         if (item.day !== currentDay) {
           currentDay = item.day;
           const dayHeader = document.createElement('div');
@@ -560,11 +564,16 @@
             <span class="text-xs text-slate-500 font-bold uppercase tracking-wider">${item.date || ''}</span>
           `;
           cardsList.appendChild(dayHeader);
+
+          // 建立該天行程卡片的網格容器
+          currentGrid = document.createElement('div');
+          currentGrid.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 mb-6";
+          cardsList.appendChild(currentGrid);
         }
 
         const emojiIcon = iconMapping[item.type] || '📍';
         const card = document.createElement('div');
-        card.className = `bg-white border ${item.isVisited ? 'border-slate-100 opacity-40' : 'border-slate-100 shadow-2xs hover:shadow-xs'} rounded-2xl p-4.5 mb-3 flex justify-between items-start transition-all duration-300 transform origin-top`;
+        card.className = `bg-white border ${item.isVisited ? 'border-slate-100 opacity-40' : 'border-slate-100 shadow-2xs hover:shadow-xs'} rounded-xl p-3 flex justify-between items-start transition-all duration-300 transform origin-top`;
         const safeDayId = (item.day || '').toString().replace(/[^a-zA-Z0-9]/g, '');
         card.id = `card-${item.rowIndex}-${safeDayId}`;
        
@@ -577,16 +586,16 @@
               <div class="flex-1 min-w-0">
                 <div class="flex items-center flex-wrap gap-x-1.5 gap-y-1">
                   ${timeHtml}
-                  <h3 class="text-base font-extrabold text-slate-955 leading-tight ${item.isVisited ? 'line-through text-slate-400' : ''}">${item.title}</h3>
+                  <h3 class="text-base font-extrabold text-slate-955 leading-tight ${item.isVisited ? 'line-through text-slate-400' : ''}">
+                    ${item.title}
+                    ${item.links ? `
+                      <a href="${item.links}" target="_blank" class="inline-flex items-center ml-1 text-rose-500 hover:text-rose-600 transition-transform active:scale-90" title="地圖導航">
+                        <span class="text-sm select-none">📍</span>
+                      </a>
+                    ` : ''}
+                  </h3>
                 </div>
-                ${item.content ? '<p class="text-sm text-slate-500 mt-2.5 leading-relaxed font-medium">' + item.content + '</p>' : ''}
-                ${item.links ? `
-                  <div class="mt-3">
-                    <a href="${item.links}" target="_blank" class="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200/80 rounded-lg transition-colors select-none active:scale-95">
-                      <span>🧭</span><span>導航地圖</span>
-                    </a>
-                  </div>
-                ` : ''}
+                ${item.content ? '<p class="text-xs text-slate-500 mt-1 leading-normal font-medium">' + item.content + '</p>' : ''}
               </div>
             </div>
           </div>
@@ -597,10 +606,14 @@
             <input type="checkbox" ${item.isVisited ? 'checked' : ''} onclick="toggleArchive(${item.rowIndex}, '${safeDayId}', this)" class="w-5.5 h-5.5 rounded-md border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer transition-transform duration-100 active:scale-90">
           </div>
         `;
-        cardsList.appendChild(card);
+        if (currentGrid) {
+          currentGrid.appendChild(card);
+        } else {
+          cardsList.appendChild(card);
+        }
       });
 
-      if (cardsList.innerHTML === '') {
+      if (renderedCount === 0) {
         cardsList.innerHTML = '<div class="text-center py-12 text-slate-400 text-sm">此分類下所有行程皆已完成！🗓️✨</div>';
       }
     }
