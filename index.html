@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>LA Trip 202608</title>
   
   <!-- 引入優質字型 -->
@@ -24,6 +24,14 @@
         document.head.appendChild(styleDiv);
       })
       .catch(err => console.error("載入樣式失敗:", err));
+
+    // 🚫 阻止手機版 / iOS 瀏覽器雙指手勢縮放
+    document.addEventListener('gesturestart', function(e) {
+      e.preventDefault();
+    });
+    document.addEventListener('gesturechange', function(e) {
+      e.preventDefault();
+    });
 
     function isInvalidTokenMessage(message) {
       return /unauthorized/i.test(message || '') && /invalid token/i.test(message || '');
