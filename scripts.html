@@ -418,8 +418,59 @@
       else if (currentTab === 'shopping') renderShopping();
     }
 
+    // Helper to sort itinerary data by day and then by time
+    function sortItineraryData(data) {
+      if (!data) return;
+      data.sort((a, b) => {
+        const numA = parseInt((a.day || '').replace(/[^0-9]/g, '')) || 999;
+        const numB = parseInt((b.day || '').replace(/[^0-9]/g, '')) || 999;
+        if (numA !== numB) return numA - numB;
+
+        const timeA = a.time ? a.time.trim() : "";
+        const timeB = b.time ? b.time.trim() : "";
+
+        const timeToMinutes = (t) => {
+          if (!t) return null;
+          const match = t.match(/(\d{1,2}):(\d{2})/);
+          if (match) {
+            let h = parseInt(match[1], 10);
+            const m = parseInt(match[2], 10);
+            if (h >= 0 && h < 24 && m >= 0 && m < 60) {
+              const isPM = /pm|下午|晚上/i.test(t);
+              if (isPM && h < 12) {
+                h += 12;
+              } else if (!isPM && h === 12 && /am|上午|早上/i.test(t)) {
+                h = 0;
+              }
+              return h * 60 + m;
+            }
+          }
+          return null;
+        };
+
+        const minA = timeToMinutes(timeA);
+        const minB = timeToMinutes(timeB);
+
+        if (minA !== null && minB !== null) return minA - minB;
+        if (minA !== null && minB === null) return -1;
+        if (minA === null && minB !== null) return 1;
+
+        if (timeA && timeB) {
+          const lexCompare = timeA.localeCompare(timeB, 'zh-Hant');
+          if (lexCompare !== 0) return lexCompare;
+        } else if (timeA) {
+          return -1;
+        } else if (timeB) {
+          return 1;
+        }
+
+        return (a.rowIndex || 0) - (b.rowIndex || 0);
+      });
+    }
+
     // === 1. 行程頁面 ===
     function renderItinerary() {
+      sortItineraryData(itineraryData);
       const container = document.getElementById('mainContainer');
       const hideVisited = document.getElementById('hideVisitedToggle').checked;
       if (itineraryData.length === 0 && !tripNote) { 
@@ -1721,13 +1772,7 @@
         itineraryData.push(newItem);
       }
       
-      const sortDaysFn = (a, b) => {
-        const numA = parseInt(a.day.replace(/[^0-9]/g, '')) || 999;
-        const numB = parseInt(b.day.replace(/[^0-9]/g, '')) || 999;
-        if (numA !== numB) return numA - numB;
-        return a.rowIndex - b.rowIndex;
-      };
-      itineraryData.sort(sortDaysFn);
+      sortItineraryData(itineraryData);
       
       renderItinerary();
       closeItineraryModal();
