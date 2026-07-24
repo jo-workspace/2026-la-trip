@@ -1,15 +1,13 @@
 import {
-  AllTripData,
-  ItineraryItem,
-  TodoItem,
-  PackingItem,
-  ExpenseItem,
-  ShoppingItem
+  AllTripData
 } from '@/types/trip';
 
 const DEFAULT_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwuT0HjqVqIpY9fO-zHC9xuG_U6et5AsYE9qkhR8_PqvLG3vTWdxRGERLbeEXzo4iUQ/exec";
 
-export function getScriptUrl(): string {
+export function getScriptUrl(overrideUrl?: string): string {
+  if (overrideUrl && overrideUrl.startsWith('http')) {
+    return overrideUrl;
+  }
   if (typeof window !== 'undefined') {
     const saved = localStorage.getItem('la_trip_api_url');
     if (saved && saved.includes('/macros/s/') && saved.includes('/exec')) {
@@ -41,8 +39,8 @@ export function setApiToken(token: string): void {
 /**
  * 通用 Apps Script API 呼叫器
  */
-export async function callGasApi<T>(action: string, args: any[] = []): Promise<T> {
-  const scriptUrl = getScriptUrl();
+export async function callGasApi<T>(action: string, args: any[] = [], overrideUrl?: string): Promise<T> {
+  const scriptUrl = getScriptUrl(overrideUrl);
   const token = getApiToken();
 
   const requestBody = {
@@ -68,7 +66,7 @@ export async function callGasApi<T>(action: string, args: any[] = []): Promise<T
     json = JSON.parse(text);
   } catch (e) {
     if (text.includes("<!DOCTYPE html>") || text.includes("<html")) {
-      throw new Error("API 網址回傳了 HTML 網頁而非 JSON。請確認 Web App 部署權限。");
+      throw new Error("API 網址回傳了 HTML 網頁而非 JSON。請確認 Web App 部署權限或 API 網址。");
     }
     throw new Error(`回傳格式非 JSON: ${text.substring(0, 100)}...`);
   }
@@ -87,67 +85,67 @@ export async function callGasApi<T>(action: string, args: any[] = []): Promise<T
 }
 
 /** 獲取所有資料 */
-export async function getAllData(bypassCache = false): Promise<AllTripData> {
-  return callGasApi<AllTripData>('getAllData', [bypassCache]);
+export async function getAllData(bypassCache = false, overrideUrl?: string): Promise<AllTripData> {
+  return callGasApi<AllTripData>('getAllData', [bypassCache], overrideUrl);
 }
 
 /** 行程 API */
-export async function saveItineraryData(formData: any): Promise<string> {
-  return callGasApi<string>('saveItineraryData', [formData]);
+export async function saveItineraryData(formData: any, overrideUrl?: string): Promise<string> {
+  return callGasApi<string>('saveItineraryData', [formData], overrideUrl);
 }
 
-export async function deleteItineraryData(rowIndex: number): Promise<string> {
-  return callGasApi<string>('deleteItineraryData', [rowIndex]);
+export async function deleteItineraryData(rowIndex: number, overrideUrl?: string): Promise<string> {
+  return callGasApi<string>('deleteItineraryData', [rowIndex], overrideUrl);
 }
 
-export async function toggleVisitedStatus(rowIndex: number, isChecked: boolean): Promise<string> {
-  return callGasApi<string>('toggleVisitedStatus', [rowIndex, isChecked]);
+export async function toggleVisitedStatus(rowIndex: number, isChecked: boolean, overrideUrl?: string): Promise<string> {
+  return callGasApi<string>('toggleVisitedStatus', [rowIndex, isChecked], overrideUrl);
 }
 
 /** 待辦 API */
-export async function saveTodoData(formData: any): Promise<string> {
-  return callGasApi<string>('saveTodoData', [formData]);
+export async function saveTodoData(formData: any, overrideUrl?: string): Promise<string> {
+  return callGasApi<string>('saveTodoData', [formData], overrideUrl);
 }
 
-export async function deleteTodoData(rowIndex: number): Promise<string> {
-  return callGasApi<string>('deleteTodoData', [rowIndex]);
+export async function deleteTodoData(rowIndex: number, overrideUrl?: string): Promise<string> {
+  return callGasApi<string>('deleteTodoData', [rowIndex], overrideUrl);
 }
 
-export async function toggleTodoStatus(rowIndex: number, isChecked: boolean): Promise<string> {
-  return callGasApi<string>('toggleTodoStatus', [rowIndex, isChecked]);
+export async function toggleTodoStatus(rowIndex: number, isChecked: boolean, overrideUrl?: string): Promise<string> {
+  return callGasApi<string>('toggleTodoStatus', [rowIndex, isChecked], overrideUrl);
 }
 
 /** 打包 API */
-export async function savePackingData(formData: any): Promise<string> {
-  return callGasApi<string>('savePackingData', [formData]);
+export async function savePackingData(formData: any, overrideUrl?: string): Promise<string> {
+  return callGasApi<string>('savePackingData', [formData], overrideUrl);
 }
 
-export async function deletePackingData(rowIndex: number): Promise<string> {
-  return callGasApi<string>('deletePackingData', [rowIndex]);
+export async function deletePackingData(rowIndex: number, overrideUrl?: string): Promise<string> {
+  return callGasApi<string>('deletePackingData', [rowIndex], overrideUrl);
 }
 
-export async function togglePackingStatus(rowIndex: number, isChecked: boolean): Promise<string> {
-  return callGasApi<string>('togglePackingStatus', [rowIndex, isChecked]);
+export async function togglePackingStatus(rowIndex: number, isChecked: boolean, overrideUrl?: string): Promise<string> {
+  return callGasApi<string>('togglePackingStatus', [rowIndex, isChecked], overrideUrl);
 }
 
 /** 記帳 API */
-export async function addExpenseData(formData: any): Promise<string> {
-  return callGasApi<string>('addExpenseData', [formData]);
+export async function addExpenseData(formData: any, overrideUrl?: string): Promise<string> {
+  return callGasApi<string>('addExpenseData', [formData], overrideUrl);
 }
 
-export async function deleteExpenseData(rowIndex: number): Promise<string> {
-  return callGasApi<string>('deleteExpenseData', [rowIndex]);
+export async function deleteExpenseData(rowIndex: number, overrideUrl?: string): Promise<string> {
+  return callGasApi<string>('deleteExpenseData', [rowIndex], overrideUrl);
 }
 
 /** 購物 API */
-export async function saveShoppingData(formData: any): Promise<string> {
-  return callGasApi<string>('saveShoppingData', [formData]);
+export async function saveShoppingData(formData: any, overrideUrl?: string): Promise<string> {
+  return callGasApi<string>('saveShoppingData', [formData], overrideUrl);
 }
 
-export async function deleteShoppingData(rowIndex: number): Promise<string> {
-  return callGasApi<string>('deleteShoppingData', [rowIndex]);
+export async function deleteShoppingData(rowIndex: number, overrideUrl?: string): Promise<string> {
+  return callGasApi<string>('deleteShoppingData', [rowIndex], overrideUrl);
 }
 
-export async function toggleShoppingStatus(rowIndex: number, isChecked: boolean): Promise<string> {
-  return callGasApi<string>('toggleShoppingStatus', [rowIndex, isChecked]);
+export async function toggleShoppingStatus(rowIndex: number, isChecked: boolean, overrideUrl?: string): Promise<string> {
+  return callGasApi<string>('toggleShoppingStatus', [rowIndex, isChecked], overrideUrl);
 }
