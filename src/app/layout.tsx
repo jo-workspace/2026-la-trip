@@ -16,7 +16,11 @@ export const metadata: Metadata = {
   title: "LA Trip 2026",
   description: "2026 洛杉磯旅遊行程與隨身助理",
   icons: {
-    icon: "/favicon.png",
+    icon: [
+      { url: "/favicon.png", type: "image/png" },
+      { url: "/favicon_la_trip.png", type: "image/png" }
+    ],
+    apple: "/favicon.png",
   },
 };
 
