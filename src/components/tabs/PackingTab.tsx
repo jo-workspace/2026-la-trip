@@ -187,9 +187,9 @@ export const PackingTab: React.FC<PackingTabProps> = ({
                             })}
                         </div>
                         {item.note && (
-                          <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
-                            {item.note}
-                          </p>
+                          <div className="text-xs text-slate-400 mt-0.5 leading-relaxed whitespace-pre-line">
+                            {item.note.replace(/<br\s*\/?>/gi, '\n')}
+                          </div>
                         )}
                       </div>
                     </div>

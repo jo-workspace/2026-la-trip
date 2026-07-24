@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { ShoppingItem } from '@/types/trip';
-import { Plus, Edit3, Link as LinkIcon, ShoppingBag } from 'lucide-react';
+import { Plus, Edit3, Link as LinkIcon } from 'lucide-react';
 
 interface ShoppingTabProps {
   data: ShoppingItem[];
@@ -176,9 +176,9 @@ export const ShoppingTab: React.FC<ShoppingTabProps> = ({
                     </div>
 
                     {item.note && (
-                      <p className="text-xs text-slate-500 font-medium mt-1 leading-relaxed">
-                        {item.note}
-                      </p>
+                      <div className="text-xs text-slate-500 font-medium mt-1 leading-relaxed whitespace-pre-line">
+                        {item.note.replace(/<br\s*\/?>/gi, '\n')}
+                      </div>
                     )}
                   </div>
                 </div>

@@ -180,9 +180,9 @@ export const ItineraryTab: React.FC<ItineraryTabProps> = ({
                             )}
                           </div>
                           {item.content && (
-                            <p className="text-xs text-slate-500 mt-1.5 leading-relaxed font-medium">
-                              {item.content}
-                            </p>
+                            <div className="text-xs text-slate-500 mt-1.5 leading-relaxed font-medium whitespace-pre-line">
+                              {item.content.replace(/<br\s*\/?>/gi, '\n')}
+                            </div>
                           )}
                         </div>
                       </div>

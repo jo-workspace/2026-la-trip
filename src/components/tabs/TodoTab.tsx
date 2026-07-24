@@ -86,9 +86,9 @@ export const TodoTab: React.FC<TodoTabProps> = ({
                     {item.task}
                   </h3>
                   {item.note && (
-                    <p className="text-sm text-slate-500 font-medium mt-1.5 leading-relaxed">
-                      {item.note}
-                    </p>
+                    <div className="text-sm text-slate-500 font-medium mt-1.5 leading-relaxed whitespace-pre-line">
+                      {item.note.replace(/<br\s*\/?>/gi, '\n')}
+                    </div>
                   )}
                 </div>
 
