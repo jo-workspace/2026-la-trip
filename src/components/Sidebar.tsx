@@ -37,7 +37,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <h2 className="font-extrabold text-lg text-white tracking-tight leading-none">
             LA Trip 2026
           </h2>
-          <span className="text-xs font-semibold text-slate-400">2026/08 行程助理</span>
         </div>
       </div>
 

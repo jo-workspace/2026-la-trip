@@ -30,9 +30,6 @@ export const Header: React.FC<HeaderProps> = ({
             <h1 className="text-base md:text-lg font-black text-slate-900 tracking-tight leading-none">
               2026 LA Trip
             </h1>
-            <p className="text-[10px] md:text-xs text-slate-400 font-medium leading-none mt-0.5">
-              洛杉磯隨身助理
-            </p>
           </div>
         </div>
 
