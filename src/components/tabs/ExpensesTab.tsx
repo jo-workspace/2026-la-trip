@@ -27,6 +27,9 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
   onAddExpense,
   onDeleteExpense,
 }) => {
+  // Format fxRate to max 4 decimal places
+  const displayFxRate = Number(parseFloat(Number(fxRate || 32.5).toFixed(4)));
+
   // Quick form state
   const [item, setItem] = useState('');
   const [amount, setAmount] = useState('');
@@ -139,7 +142,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
           {/* Settlement Banner */}
           <div className="bg-gradient-to-br from-slate-800 to-slate-900 text-white p-5 rounded-2xl shadow-sm border border-slate-700/50 text-center">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">
-              分帳結算 (匯率 1:{fxRate})
+              分帳結算 (匯率 1:{displayFxRate})
             </span>
             <div className="text-xl font-extrabold text-amber-400 tracking-tight">
               {settlementText}
@@ -187,7 +190,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
                 <DollarSign className="w-4 h-4" />
                 <span>新增記帳項目</span>
               </h3>
-              <span className="text-[10px] text-slate-400 font-mono">1 USD ≈ {fxRate} TWD</span>
+              <span className="text-[10px] text-slate-400 font-mono">1 USD ≈ {displayFxRate} TWD</span>
             </div>
 
             {/* Item Title & Amount */}

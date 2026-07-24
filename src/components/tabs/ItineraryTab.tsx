@@ -68,9 +68,9 @@ export const ItineraryTab: React.FC<ItineraryTabProps> = ({
             <span>📢</span>
             <span>行程重要備註</span>
           </div>
-          <p className="text-sm font-medium leading-relaxed font-sans text-slate-200">
-            {tripNote}
-          </p>
+          <div className="text-sm font-medium leading-relaxed font-sans text-slate-200 whitespace-pre-line">
+            {tripNote.replace(/<br\s*\/?>/gi, '\n')}
+          </div>
         </div>
       )}
 
