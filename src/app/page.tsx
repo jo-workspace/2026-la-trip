@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { TRIPS } from '@/config/trips';
-import { Compass, Calendar, ArrowRight, Plus, MapPin } from 'lucide-react';
+import { Compass, ArrowRight, Plus, MapPin } from 'lucide-react';
 
 export default function HomePage() {
   const tripList = Object.values(TRIPS);
@@ -21,29 +21,13 @@ export default function HomePage() {
               <h1 className="text-lg font-black tracking-tight text-white leading-none">
                 Travel Hub
               </h1>
-              <p className="text-[11px] text-slate-400 font-medium leading-none mt-1">
-                個人旅遊門戶大廳
-              </p>
             </div>
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-12 space-y-10">
-        <div className="space-y-3 max-w-2xl">
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-slate-800 text-amber-400 text-xs font-extrabold border border-slate-700">
-            <span>✨</span>
-            <span>選擇探索您的旅遊行程</span>
-          </div>
-          <h2 className="text-3xl md:text-4xl font-black tracking-tight text-white leading-tight">
-            探索您的精采旅程
-          </h2>
-          <p className="text-sm text-slate-400 font-medium leading-relaxed">
-            即時管理行程景點、分帳記帳、打包行李與待辦事項。選擇下方旅程即可開啟專屬個人助理！
-          </p>
-        </div>
-
+      <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-8 space-y-8">
         {/* Trip Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {tripList.map((trip) => (
@@ -100,9 +84,6 @@ export default function HomePage() {
               <p className="text-xs text-slate-400 leading-relaxed font-medium">
                 隨時複製這套範本，在設定檔加一行即可輕鬆上線下一個旅程！
               </p>
-            </div>
-            <div className="text-2xs text-slate-500 font-mono pt-4 border-t border-slate-800">
-              💡 支援無限擴充行程卡片
             </div>
           </div>
         </div>
