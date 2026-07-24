@@ -1,0 +1,83 @@
+'use client';
+
+import React from 'react';
+import { Calendar, CheckSquare, Package, DollarSign, ShoppingBag, Eye, EyeOff } from 'lucide-react';
+
+export type TabType = 'itinerary' | 'todo' | 'packing' | 'expenses' | 'shopping';
+
+interface SidebarProps {
+  currentTab: TabType;
+  onSelectTab: (tab: TabType) => void;
+  hideVisited: boolean;
+  onToggleHideVisited: () => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({
+  currentTab,
+  onSelectTab,
+  hideVisited,
+  onToggleHideVisited,
+}) => {
+  const tabs = [
+    { id: 'itinerary', label: '行程表', icon: Calendar },
+    { id: 'todo', label: '待辦事項', icon: CheckSquare },
+    { id: 'packing', label: '行李打包', icon: Package },
+    { id: 'expenses', label: '記帳與分帳', icon: DollarSign },
+    { id: 'shopping', label: '購物清單', icon: ShoppingBag },
+  ] as const;
+
+  return (
+    <aside className="hidden md:flex flex-col w-64 bg-slate-900 text-slate-200 fixed left-0 top-0 bottom-0 z-50 p-4 border-r border-slate-800">
+      {/* Brand Header */}
+      <div className="flex items-center space-x-3 px-3 py-4 mb-6">
+        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 font-black text-lg flex items-center justify-center shadow-md">
+          LA
+        </div>
+        <div>
+          <h2 className="font-extrabold text-lg text-white tracking-tight leading-none">
+            LA Trip 2026
+          </h2>
+          <span className="text-xs font-semibold text-slate-400">2026/08 行程助理</span>
+        </div>
+      </div>
+
+      {/* Navigation Links */}
+      <nav className="flex-1 space-y-1.5">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = currentTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => onSelectTab(tab.id as TabType)}
+              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer font-bold text-sm ${
+                isActive
+                  ? 'bg-slate-800 text-white shadow-sm border-l-4 border-amber-400'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+              }`}
+            >
+              <Icon className={`w-5 h-5 ${isActive ? 'text-amber-400' : 'text-slate-400'}`} />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Footer Toggle */}
+      <div className="pt-4 border-t border-slate-800">
+        <button
+          onClick={onToggleHideVisited}
+          className="w-full flex items-center justify-between px-4 py-3 bg-slate-800/60 hover:bg-slate-800 rounded-xl transition-all duration-200 cursor-pointer text-xs font-semibold text-slate-300"
+        >
+          <div className="flex items-center space-x-2">
+            {hideVisited ? <EyeOff className="w-4 h-4 text-amber-400" /> : <Eye className="w-4 h-4 text-slate-400" />}
+            <span>{hideVisited ? '隱藏去過/已完成' : '顯示全項目'}</span>
+          </div>
+          <span className="text-[10px] bg-slate-700 px-2 py-0.5 rounded text-slate-300 font-mono">
+            {hideVisited ? 'ON' : 'OFF'}
+          </span>
+        </button>
+      </div>
+    </aside>
+  );
+};

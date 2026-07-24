@@ -1,0 +1,2447 @@
+<script>
+    let currentTab = 'itinerary';
+    let currentFilterGroup = '全部';
+    let fxRate = 32.5;
+    let tripNote = "";
+    let itineraryData = [], todoData = [], packingData = [], expensesData = [], shoppingData = [];
+
+    let selectedFormCategory = '🍔', selectedFormPaidBy = 'Jo', selectedFormSplit = '公用', selectedFormCurrency = 'USD';
+
+    // 各項分類對應之色彩系統（適用於歷史明細與分類圓圈）
+    const categoryColors = {
+      '🍔': { bg: 'bg-amber-50', text: 'text-amber-600' },
+      '✈️': { bg: 'bg-blue-50', text: 'text-blue-600' },
+      '🛒': { bg: 'bg-indigo-50', text: 'text-indigo-600' },
+      '🚗': { bg: 'bg-sky-50', text: 'text-sky-600' },
+      '⚾': { bg: 'bg-emerald-50', text: 'text-emerald-600' },
+      '🏨': { bg: 'bg-rose-50', text: 'text-rose-600' },
+      '❔': { bg: 'bg-slate-100', text: 'text-slate-650' }
+    };
+
+    const iconMapping = {
+      '航班': '✈️', '住宿': '🏨', '景點': '🎡', '行程': '🗓️', '球場': '⚾', '交通': '🚗', '購物': '🛒', '美食': '🍔', '機票': '✈️', '其他': '❔'
+    };
+
+    function adjustStickyTops() {
+      const header = document.querySelector('header');
+      const subCtrl = document.getElementById('subSubControl');
+      const anchorBar = document.getElementById('itinerary-anchor-bar');
+      if (!header) return;
+      const isDesktop = window.innerWidth >= 768;
+      const isHidden = isDesktop || header.style.transform === 'translateY(-100%)';
+      const targetTop = isHidden ? '0px' : '53px';
+      if (subCtrl) subCtrl.style.top = targetTop;
+      if (anchorBar) anchorBar.style.top = targetTop;
+    }
+
+    function initApp() {
+      // 依據網址的 hash 自動切換至對應分頁，否則預設為 itinerary
+      const initialTab = location.hash.substring(1) || 'itinerary';
+      activateTab(initialTab);
+
+      renderSkeleton();
+      fetchInitialData();
+      
+      const toggle = document.getElementById('hideVisitedToggle');
+      const sidebarToggle = document.getElementById('sidebarHideToggle');
+      
+      function handleToggleChange(e) {
+        const checked = e.target.checked;
+        if (toggle && toggle.checked !== checked) {
+          toggle.checked = checked;
+        }
+        if (sidebarToggle && sidebarToggle.checked !== checked) {
+          sidebarToggle.checked = checked;
+        }
+        updateToggleBtnStyle();
+        renderCurrentTab();
+      }
+
+      if (toggle) {
+        toggle.removeEventListener('change', handleToggleChange);
+        toggle.addEventListener('change', handleToggleChange);
+      }
+      if (sidebarToggle) {
+        sidebarToggle.removeEventListener('change', handleToggleChange);
+        sidebarToggle.addEventListener('change', handleToggleChange);
+      }
+
+      // 頂部 Header 滾動自動隱藏邏輯
+      let lastScrollY = window.scrollY;
+      const header = document.querySelector('header');
+      if (header) {
+        window.addEventListener('scroll', () => {
+          const currentScrollY = window.scrollY;
+          if (currentScrollY > lastScrollY && currentScrollY > 60) {
+            // 往下滾動 - 隱藏 Header
+            header.style.transform = 'translateY(-100%)';
+          } else {
+            // 往上滾動 - 顯示 Header
+            header.style.transform = 'translateY(0)';
+          }
+          adjustStickyTops();
+          lastScrollY = currentScrollY;
+        }, { passive: true });
+        // 當視窗大小改變時，重新計算 Sticky 的 top 位置
+        window.addEventListener('resize', adjustStickyTops, { passive: true });
+      }
+    }
+
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+      initApp();
+    } else {
+      window.onload = initApp;
+    }
+
+    // 監聽網址的 Hash 變化，以支援瀏覽器上一頁/下一頁切換分頁
+    window.onhashchange = function() {
+      const tab = location.hash.substring(1) || 'itinerary';
+      activateTab(tab);
+    };
+
+    // 骨架屏 (Skeleton Loader) 渲染，提升首載視覺體驗
+    function renderSkeleton() {
+      const container = document.getElementById('skeletonContainer') || document.getElementById('mainContainer');
+      container.innerHTML = `
+        <div class="space-y-4 animate-pulse mt-2">
+          <div class="h-6 bg-slate-200 rounded-md w-1/3 mb-2"></div>
+          <div class="bg-white border border-slate-100 rounded-2xl p-4 shadow-2xs flex justify-between items-start">
+            <div class="flex-1 space-y-3 pr-4">
+              <div class="flex items-center space-x-2">
+                <div class="h-8 w-8 bg-slate-200 rounded-full"></div>
+                <div class="h-5 bg-slate-200 rounded w-1/4"></div>
+                <div class="h-6 bg-slate-200 rounded w-1/2"></div>
+              </div>
+              <div class="h-4 bg-slate-200 rounded w-5/6 ml-10"></div>
+              <div class="h-4 bg-slate-200 rounded w-2/3 ml-10"></div>
+            </div>
+            <div class="h-5 w-5 bg-slate-200 rounded-md"></div>
+          </div>
+          <div class="bg-white border border-slate-100 rounded-2xl p-4 shadow-2xs flex justify-between items-start">
+            <div class="flex-1 space-y-3 pr-4">
+              <div class="flex items-center space-x-2">
+                <div class="h-8 w-8 bg-slate-200 rounded-full"></div>
+                <div class="h-5 bg-slate-200 rounded w-1/3"></div>
+                <div class="h-6 bg-slate-200 rounded w-2/5"></div>
+              </div>
+              <div class="h-4 bg-slate-200 rounded w-3/4 ml-10"></div>
+            </div>
+            <div class="h-5 w-5 bg-slate-200 rounded-md"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Toast 浮動提示功能
+    function showToast(msg, type = "success") {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+      
+      const toast = document.createElement('div');
+      toast.className = `transform translate-y-10 opacity-0 transition-all duration-300 px-4 py-2.5 rounded-full text-xs font-semibold shadow-md flex items-center space-x-2 pointer-events-auto ${
+        type === 'error' ? 'bg-rose-600 text-white' : 'bg-slate-900 text-white'
+      }`;
+      
+      const icon = type === 'error' ? '⚠️' : '✅';
+      toast.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
+      container.appendChild(toast);
+      
+      // Animate in
+      setTimeout(() => {
+        toast.classList.remove('translate-y-10', 'opacity-0');
+      }, 10);
+      
+      // Animate out
+      setTimeout(() => {
+        toast.classList.add('translate-y-10', 'opacity-0');
+        setTimeout(() => { toast.remove(); }, 300);
+      }, 2500);
+    }
+
+    // 判斷是否為 Google Maps 連結
+    function isGoogleMapsUrl(url) {
+      if (!url) return false;
+      const lower = url.toLowerCase();
+      return lower.includes('google.com/maps') || lower.includes('maps.app.goo.gl') || lower.includes('maps.google');
+    }
+
+    // 從 Google Maps 連結中精準提取導航點（座標、Place Name 或 Search Query）
+    function extractPlaceForRouting(url, title) {
+      if (!url) return "";
+      
+      // 1. 嘗試提取 Search API Query 參數
+      const queryMatch = url.match(/[?&]query=([^&]+)/);
+      if (queryMatch) {
+        try {
+          return decodeURIComponent(queryMatch[1].replace(/\+/g, ' '));
+        } catch(e) {
+          return queryMatch[1];
+        }
+      }
+
+      // 2. 嘗試提取精準經緯度座標（@lat,lng - 最精準，免語意搜尋錯誤）
+      const coordMatch = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+      if (coordMatch) {
+        return `${coordMatch[1]},${coordMatch[2]}`;
+      }
+      
+      // 3. 嘗試從標準 place URL 中提取目的地英文/名稱
+      const placeMatch = url.match(/\/maps\/place\/([^/]+)/);
+      if (placeMatch) {
+        try {
+          return decodeURIComponent(placeMatch[1].replace(/\+/g, ' '));
+        } catch(e) {
+          return placeMatch[1];
+        }
+      }
+      
+      // 4. 無法提取則回退為空字串，不允許語意搜尋標題
+      return "";
+    }
+
+    // 首次抓取資料 (預設使用 CacheService 機制，極速載入)
+    function fetchInitialData() {
+      google.script.run
+        .withSuccessHandler(function(response) {
+          if (!response) { showError("未取得回傳資料"); return; }
+          itineraryData = response.itinerary || [];
+          todoData = response.todo || [];
+          packingData = response.packing || [];
+          expensesData = response.expenses || [];
+          shoppingData = response.shopping || [];
+          fxRate = response.fxRate || 32.5;
+          tripNote = response.tripNote || "";
+          updateSubControlMenu();
+          renderCurrentTab();
+        })
+        .withFailureHandler(function(err) {
+          showError("Apps Script 執行失敗: " + err.message);
+        })
+        .getAllData(false); // 不強制 Bypass，優先讀取快取
+    }
+
+    // 強制手動重整 (跳過快取，重新撈取 Google Sheet 最強防禦)
+    function handleRefresh() {
+      const btnIcon = document.getElementById('refreshIcon');
+      const container = document.getElementById('mainContainer');
+      btnIcon.classList.add('spin-animation');
+      container.classList.add('opacity-50');
+     
+      google.script.run
+        .withSuccessHandler(function(response) {
+          btnIcon.classList.remove('spin-animation');
+          container.classList.remove('opacity-50');
+          if (!response) return;
+          itineraryData = response.itinerary || [];
+          todoData = response.todo || [];
+          packingData = response.packing || [];
+          expensesData = response.expenses || [];
+          shoppingData = response.shopping || [];
+          fxRate = response.fxRate || 32.5;
+          tripNote = response.tripNote || "";
+          updateSubControlMenu();
+          renderCurrentTab();
+          showToast("資料已更新為 Google Sheet 最新內容");
+        })
+        .withFailureHandler(function(err) {
+          btnIcon.classList.remove('spin-animation');
+          container.classList.remove('opacity-50');
+          showError("重新整理失敗: " + err.message);
+        })
+        .getAllData(true); // 傳入 true 強製重新從試算表讀取，並重設快取
+    }
+
+    function showError(msg) {
+      document.getElementById('mainContainer').innerHTML = `
+        <div class="bg-rose-50 border border-rose-100 p-4 text-rose-800 text-xs font-mono leading-relaxed rounded-2xl shadow-sm">
+          <div class="font-bold text-sm mb-1 flex items-center">❌ 讀取發生錯誤</div>
+          <div>${msg}</div>
+        </div>
+      `;
+    }
+
+    function updateSubControlMenu() {
+      const subCtrl = document.getElementById('subSubControl');
+      subCtrl.innerHTML = '';
+      
+      if (currentTab === 'todo') {
+        subCtrl.className = "bg-slate-50/90 backdrop-blur-xs px-4 py-2 md:pl-72 md:pr-8 md:pt-6 md:pb-4 border-b border-slate-200/40 sticky top-[53px] md:top-0 z-30 flex space-x-1.5 overflow-x-auto no-scrollbar flex-shrink-0 items-center";
+        const addBtn = document.createElement('button');
+        addBtn.onclick = () => openTodoModal();
+        addBtn.className = "px-3 py-1 text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-250 hover:bg-emerald-100 rounded-full cursor-pointer select-none whitespace-nowrap shadow-3xs transition-all active:scale-95 flex items-center space-x-1 flex-shrink-0";
+        addBtn.innerHTML = `<span>➕</span><span>新增待辦</span>`;
+        subCtrl.appendChild(addBtn);
+      } else if (currentTab === 'packing') {
+        subCtrl.className = "bg-slate-50/90 backdrop-blur-xs px-4 py-2 md:pl-72 md:pr-8 md:pt-6 md:pb-4 border-b border-slate-200/40 sticky top-[53px] md:top-0 z-30 flex space-x-1.5 overflow-x-auto no-scrollbar flex-shrink-0 items-center";
+        
+        const addBtn = document.createElement('button');
+        addBtn.onclick = () => openPackingModal();
+        addBtn.className = "px-3 py-1 text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-250 hover:bg-emerald-100 rounded-full cursor-pointer select-none whitespace-nowrap shadow-3xs transition-all active:scale-95 flex items-center space-x-1 flex-shrink-0 mr-1.5";
+        addBtn.innerHTML = `<span>➕</span><span>新增打包</span>`;
+        subCtrl.appendChild(addBtn);
+
+        let personSet = new Set();
+        packingData.forEach(item => {
+          if (item.person) {
+            let tokens = item.person.split(/[\n,，]+/);
+            tokens.forEach(t => { if(t.trim()) personSet.add(t.trim()); });
+          }
+        });
+        appendFilterElements(['全部', ...Array.from(personSet)], (target) => {
+          if (currentTab === 'packing') renderPacking();
+        });
+      } else if (currentTab === 'shopping') {
+        subCtrl.className = "bg-slate-50/90 backdrop-blur-xs px-4 py-2 md:pl-72 md:pr-8 md:pt-6 md:pb-4 border-b border-slate-200/40 sticky top-[53px] md:top-0 z-30 flex space-x-1.5 overflow-x-auto no-scrollbar flex-shrink-0 items-center";
+        
+        const addBtn = document.createElement('button');
+        addBtn.onclick = () => openShoppingModal();
+        addBtn.className = "px-3 py-1 text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-250 hover:bg-emerald-100 rounded-full cursor-pointer select-none whitespace-nowrap shadow-3xs transition-all active:scale-95 flex items-center space-x-1 flex-shrink-0 mr-1.5";
+        addBtn.innerHTML = `<span>➕</span><span>新增購物</span>`;
+        subCtrl.appendChild(addBtn);
+
+        let storeSet = new Set();
+        shoppingData.forEach(item => {
+          if (item.store) {
+            let tokens = item.store.split(/[\n,，]+/);
+            tokens.forEach(t => { if(t.trim()) storeSet.add(t.trim()); });
+          }
+        });
+        appendFilterElements(['全部', ...Array.from(storeSet)], (target) => {
+          if (currentTab === 'shopping') renderShopping();
+        });
+      } else {
+        subCtrl.className = "hidden";
+      }
+      adjustStickyTops();
+    }
+
+    function switchTab(tab) {
+      location.hash = tab;
+    }
+
+    function activateTab(tab) {
+      const validTabs = ['itinerary', 'todo', 'packing', 'expenses', 'shopping'];
+      if (!validTabs.includes(tab)) {
+        tab = 'itinerary';
+      }
+      
+      currentTab = tab;
+      currentFilterGroup = '全部';
+     
+      validTabs.forEach(key => {
+        // 1. 手機板底部導覽列樣式切換 (方形 Tabs：寬度不變、微小圓角)
+        const el = document.getElementById(`tab-${key}`);
+        if (el) {
+          const textSpan = el.querySelector('span:last-child');
+          
+          if (key === tab) {
+            // 已選中：完美的 flex-1 寬度不變，方形背景僅帶極微小圓角 (rounded)
+            el.className = "flex items-center justify-center flex-1 h-full py-2.5 bg-[#5a7384]/8 text-[#2c3e4c] font-bold rounded transition-all duration-200 cursor-pointer mx-0.5";
+            if (textSpan) {
+              textSpan.classList.remove('hidden');
+              textSpan.className = "text-xs font-extrabold tracking-wider ml-1 text-[#2c3e4c]";
+            }
+          } else {
+            // 未選中：保持乾淨透亮，圖標微微淡化
+            el.className = "flex items-center justify-center flex-1 h-full py-2.5 text-slate-400 hover:text-slate-600 transition-all duration-200 cursor-pointer mx-0.5";
+            if (textSpan) {
+              textSpan.classList.add('hidden');
+            }
+          }
+        }
+        
+        // 2. 電腦版左側邊欄樣式切換 (保持原樣不變)
+        const sidebarEl = document.getElementById(`sidebar-tab-${key}`);
+        if (sidebarEl) {
+          if (key === tab) {
+            sidebarEl.className = "w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-[#2c3e4c] bg-white font-semibold border-l-4 border-[#3a4b53] pl-3 cursor-pointer";
+          } else {
+            sidebarEl.className = "w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 text-[#ecf0f3] hover:text-white hover:bg-[#495e6d]/40 font-medium border-l-4 border-transparent cursor-pointer";
+          }
+        }
+      });
+     
+      const tabLabels = {
+        itinerary: '隱藏去過',
+        todo: '隱藏已做',
+        packing: '隱藏打包',
+        expenses: '記帳明細',
+        shopping: '隱藏買過'
+      };
+      
+      const toggleLabel = document.getElementById('toggleLabel');
+      if (toggleLabel) toggleLabel.innerText = tabLabels[tab];
+      
+      const mainToggleContainer = document.getElementById('mainToggleContainer');
+      if (mainToggleContainer) {
+        mainToggleContainer.className = (tab === 'expenses')
+          ? "hidden"
+          : "flex items-center space-x-1 text-xs font-bold text-slate-500 bg-slate-100 hover:bg-slate-200/80 px-2.5 py-1.5 rounded-full cursor-pointer select-none transition-colors duration-150";
+      }
+
+      updateSubControlMenu();
+      renderCurrentTab();
+    }
+
+    function appendFilterElements(list, onFilterChange) {
+      const subCtrl = document.getElementById('subSubControl');
+      if (!list.includes(currentFilterGroup)) currentFilterGroup = '全部';
+
+      list.forEach(item => {
+        const div = document.createElement('div');
+        div.innerText = item;
+        div.id = `filter-${item}`;
+        div.onclick = () => {
+          currentFilterGroup = item;
+          list.forEach(x => {
+            const el = document.getElementById(`filter-${x}`);
+            if (el) {
+              el.className = (x === currentFilterGroup)
+                ? "px-3 py-1 text-xs font-bold bg-slate-800 text-white rounded-full cursor-pointer select-none transition-all duration-200 whitespace-nowrap shadow-2xs"
+                : "px-3 py-1 text-xs font-semibold text-slate-500 bg-white border border-slate-200/60 rounded-full cursor-pointer select-none hover:bg-slate-55 transition-all duration-200 whitespace-nowrap";
+            }
+          });
+          onFilterChange(item);
+        };
+        div.className = (item === currentFilterGroup)
+          ? "px-3 py-1 text-xs font-bold bg-slate-800 text-white rounded-full cursor-pointer select-none transition-all duration-200 whitespace-nowrap shadow-2xs"
+          : "px-3 py-1 text-xs font-semibold text-slate-500 bg-white border border-slate-200/60 rounded-full cursor-pointer select-none hover:bg-slate-55 transition-all duration-200 whitespace-nowrap";
+        subCtrl.appendChild(div);
+      });
+    }
+
+    function renderCurrentTab() {
+      if (currentTab === 'itinerary') renderItinerary();
+      else if (currentTab === 'todo') renderTodo();
+      else if (currentTab === 'packing') renderPacking();
+      else if (currentTab === 'expenses') renderExpenses();
+      else if (currentTab === 'shopping') renderShopping();
+    }
+
+    // Helper to sort itinerary data by day and then by time
+    function sortItineraryData(data) {
+      if (!data) return;
+      data.sort((a, b) => {
+        const numA = parseInt((a.day || '').replace(/[^0-9]/g, '')) || 999;
+        const numB = parseInt((b.day || '').replace(/[^0-9]/g, '')) || 999;
+        if (numA !== numB) return numA - numB;
+
+        const timeA = a.time ? a.time.trim() : "";
+        const timeB = b.time ? b.time.trim() : "";
+
+        const timeToMinutes = (t) => {
+          if (!t) return null;
+          const match = t.match(/(\d{1,2}):(\d{2})/);
+          if (match) {
+            let h = parseInt(match[1], 10);
+            const m = parseInt(match[2], 10);
+            if (h >= 0 && h < 24 && m >= 0 && m < 60) {
+              const isPM = /pm|下午|晚上/i.test(t);
+              if (isPM && h < 12) {
+                h += 12;
+              } else if (!isPM && h === 12 && /am|上午|早上/i.test(t)) {
+                h = 0;
+              }
+              return h * 60 + m;
+            }
+          }
+          return null;
+        };
+
+        const minA = timeToMinutes(timeA);
+        const minB = timeToMinutes(timeB);
+
+        if (minA !== null && minB !== null) return minA - minB;
+        if (minA !== null && minB === null) return -1;
+        if (minA === null && minB !== null) return 1;
+
+        if (timeA && timeB) {
+          const lexCompare = timeA.localeCompare(timeB, 'zh-Hant');
+          if (lexCompare !== 0) return lexCompare;
+        } else if (timeA) {
+          return -1;
+        } else if (timeB) {
+          return 1;
+        }
+
+        return (a.rowIndex || 0) - (b.rowIndex || 0);
+      });
+    }
+
+    // === 1. 行程頁面 ===
+    function renderItinerary() {
+      sortItineraryData(itineraryData);
+      const container = document.getElementById('mainContainer');
+      const hideVisited = document.getElementById('hideVisitedToggle').checked;
+      if (itineraryData.length === 0 && !tripNote) { 
+        container.innerHTML = '<div class="text-center py-12 text-slate-400 text-sm">目前沒有行程資料</div>'; 
+        return; 
+      }
+
+      let noteContainer = document.getElementById('itinerary-note-container');
+      let anchorBar = document.getElementById('itinerary-anchor-bar');
+      let cardsList = document.getElementById('itinerary-cards-list');
+
+      if (!anchorBar || !cardsList) {
+        container.innerHTML = '';
+
+        noteContainer = document.createElement('div');
+        noteContainer.id = 'itinerary-note-container';
+        container.appendChild(noteContainer);
+
+        anchorBar = document.createElement('div');
+        anchorBar.id = 'itinerary-anchor-bar';
+        anchorBar.className = "flex space-x-2 overflow-x-auto no-scrollbar py-2 mb-4 sticky top-[53px] md:top-0 bg-slate-50/90 backdrop-blur-xs z-30 border-b border-slate-200/40 pl-1";
+        container.appendChild(anchorBar);
+
+        cardsList = document.createElement('div');
+        cardsList.id = 'itinerary-cards-list';
+        container.appendChild(cardsList);
+      }
+
+      if (tripNote) {
+        noteContainer.className = "bg-slate-800 text-slate-200 p-4.5 mb-5 border-l-4 border-amber-400 rounded-r-2xl shadow-xs transition-all hover:shadow-sm";
+        noteContainer.innerHTML = `
+          <div class="text-xs font-bold tracking-wider uppercase text-amber-400 mb-2 flex items-center">
+            <span>📢</span><span class="ml-1.5">行程重要備註</span>
+          </div>
+          <div class="text-sm font-medium leading-relaxed font-sans text-slate-100">${tripNote}</div>
+        `;
+        noteContainer.classList.remove('hidden');
+      } else {
+        noteContainer.innerHTML = '';
+        noteContainer.classList.add('hidden');
+      }
+
+      renderItineraryAnchorBar();
+      renderItineraryCards();
+      adjustStickyTops();
+    }
+
+    function renderItineraryAnchorBar() {
+      const anchorBar = document.getElementById('itinerary-anchor-bar');
+      if (!anchorBar) return;
+
+      const hideVisited = document.getElementById('hideVisitedToggle').checked;
+
+      // --- 計算與生成 Day 錨點按鈕列 (已去過標灰並置後) ---
+      let dayMap = {};
+      itineraryData.forEach(item => {
+        if (!dayMap[item.day]) {
+          dayMap[item.day] = { allVisited: true, rawDay: item.day };
+        }
+        if (!item.isVisited) {
+          dayMap[item.day].allVisited = false;
+        }
+      });
+
+      let activeDays = [];
+      let completedDays = [];
+      Object.keys(dayMap).forEach(day => {
+        const info = dayMap[day];
+        if (info.allVisited) completedDays.push(info);
+        else activeDays.push(info);
+      });
+
+      const sortDaysFn = (a, b) => {
+        const numA = parseInt(a.rawDay.replace(/[^0-9]/g, '')) || 999;
+        const numB = parseInt(b.rawDay.replace(/[^0-9]/g, '')) || 999;
+        return numA - numB;
+      };
+      activeDays.sort(sortDaysFn);
+      completedDays.sort(sortDaysFn);
+
+      let orderedDays = [...activeDays, ...completedDays];
+
+      anchorBar.innerHTML = '';
+      
+      // Prepend "➕ 新增行程" button to Itinerary Day list
+      const addBtn = document.createElement('button');
+      addBtn.onclick = () => openItineraryModal();
+      addBtn.className = "px-3 py-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 rounded-full cursor-pointer select-none whitespace-nowrap shadow-3xs transition-all active:scale-95 flex items-center space-x-1 flex-shrink-0 mr-1.5";
+      addBtn.innerHTML = `<span>➕</span><span>新增行程</span>`;
+      anchorBar.appendChild(addBtn);
+
+      if (orderedDays.length > 0) {
+        orderedDays.forEach(dayInfo => {
+          const btn = document.createElement('button');
+          const safeDayId = dayInfo.rawDay.replace(/[^a-zA-Z0-9]/g, '');
+          btn.onclick = () => {
+            const targetEl = document.getElementById(`day-header-${safeDayId}`);
+            if (targetEl) {
+              targetEl.scrollIntoView({ behavior: 'smooth' });
+            } else {
+              if (dayInfo.allVisited && hideVisited) {
+                showToast(`此日行程已全部完成，請取消勾選「隱藏去過」以查看詳細行程`);
+              }
+            }
+          };
+          
+          if (dayInfo.allVisited) {
+            btn.className = "px-3 py-1.5 text-xs font-semibold text-slate-400 bg-slate-100 border border-slate-200/50 rounded-full cursor-pointer select-none whitespace-nowrap opacity-60 hover:opacity-100 transition-all";
+            btn.innerText = `✓ ${dayInfo.rawDay}`;
+          } else {
+            btn.className = "px-3 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 hover:bg-slate-55 rounded-full cursor-pointer select-none whitespace-nowrap shadow-3xs transition-all active:scale-95";
+            btn.innerText = dayInfo.rawDay;
+          }
+          anchorBar.appendChild(btn);
+        });
+      }
+    }
+
+    function renderItineraryCards() {
+      const cardsList = document.getElementById('itinerary-cards-list');
+      if (!cardsList) return;
+
+      const hideVisited = document.getElementById('hideVisitedToggle').checked;
+      cardsList.innerHTML = '';
+
+      let currentDay = "";
+      let currentGrid = null;
+      let renderedCount = 0;
+
+      itineraryData.forEach(item => {
+        if (hideVisited && item.isVisited) return;
+        renderedCount++;
+
+        if (item.day !== currentDay) {
+          currentDay = item.day;
+          const dayHeader = document.createElement('div');
+          const safeDayId = currentDay.replace(/[^a-zA-Z0-9]/g, '');
+          dayHeader.id = `day-header-${safeDayId}`;
+          dayHeader.className = "mt-6 mb-3 flex items-baseline space-x-2.5 pl-1 scroll-mt-28";
+          dayHeader.innerHTML = `
+            <span class="text-sm font-extrabold bg-slate-900 text-white px-3 py-1 rounded-full select-none shadow-2xs">${item.day || ''}</span>
+            <span class="text-xs text-slate-500 font-bold uppercase tracking-wider">${item.date || ''}</span>
+          `;
+          cardsList.appendChild(dayHeader);
+
+          // 建立該天行程卡片的網格容器
+          currentGrid = document.createElement('div');
+          currentGrid.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 mb-6";
+          cardsList.appendChild(currentGrid);
+        }
+
+        const emojiIcon = iconMapping[item.type] || '📍';
+        const card = document.createElement('div');
+        card.className = `bg-white border ${item.isVisited ? 'border-slate-100 opacity-40' : 'border-slate-100 shadow-2xs hover:shadow-xs'} rounded-xl p-3 flex justify-between items-start transition-all duration-300 transform origin-top`;
+        const safeDayId = (item.day || '').toString().replace(/[^a-zA-Z0-9]/g, '');
+        card.id = `card-${item.rowIndex}-${safeDayId}`;
+       
+        let timeHtml = item.time ? `<span class="text-sm font-semibold text-slate-400 font-mono mr-1.5 select-none">${item.time}</span>` : '';
+
+        card.innerHTML = `
+          <div class="flex-1 pr-4">
+            <div class="flex items-start space-x-2.5">
+              <span class="text-xl leading-none mt-0.5 select-none">${emojiIcon}</span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center flex-wrap gap-x-1.5 gap-y-1">
+                  ${timeHtml}
+                  <h3 class="text-base font-extrabold text-slate-955 leading-tight ${item.isVisited ? 'line-through text-slate-400' : ''}">
+                    ${item.title}
+                    ${item.links ? `
+                      <a href="${item.links}" target="_blank" class="inline-flex items-center ml-1 text-rose-500 hover:text-rose-600 transition-transform active:scale-90" title="地圖導航">
+                        <span class="text-sm select-none">📍</span>
+                      </a>
+                    ` : ''}
+                  </h3>
+                </div>
+                ${item.content ? '<p class="text-xs text-slate-500 mt-1 leading-normal font-medium">' + item.content + '</p>' : ''}
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center justify-center pl-2 h-full space-x-1.5 flex-shrink-0">
+            <button onclick="openItineraryModal(${item.rowIndex})" class="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all focus:outline-none flex items-center justify-center cursor-pointer active:scale-90" title="編輯">
+              <span class="text-xs leading-none select-none">✎</span>
+            </button>
+            <input type="checkbox" ${item.isVisited ? 'checked' : ''} onclick="toggleArchive(${item.rowIndex}, '${safeDayId}', this)" class="w-5.5 h-5.5 rounded-md border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer transition-transform duration-100 active:scale-90">
+          </div>
+        `;
+        if (currentGrid) {
+          currentGrid.appendChild(card);
+        } else {
+          cardsList.appendChild(card);
+        }
+      });
+
+      if (renderedCount === 0) {
+        cardsList.innerHTML = '<div class="text-center py-12 text-slate-400 text-sm">此分類下所有行程皆已完成！🗓️✨</div>';
+      }
+    }
+
+    // === 2. 待辦頁面 ===
+    function renderTodo() {
+      const container = document.getElementById('mainContainer');
+      const hideDone = document.getElementById('hideVisitedToggle').checked;
+      if (todoData.length === 0) { container.innerHTML = '<div class="text-center py-12 text-slate-400 text-sm">目前沒有待辦事項</div>'; return; }
+      container.innerHTML = '';
+      
+      // Sort by category first, then by rowIndex to group categories together
+      const sortedTodo = [...todoData].sort((a, b) => {
+        const catA = a.category || "其他";
+        const catB = b.category || "其他";
+        if (catA !== catB) {
+          return catA.localeCompare(catB, 'zh-Hant');
+        }
+        return a.rowIndex - b.rowIndex;
+      });
+      
+      let currentCategory = "";
+      sortedTodo.forEach(item => {
+        if (hideDone && item.isDone) return;
+        if (item.category !== currentCategory) {
+          currentCategory = item.category;
+          const catHeader = document.createElement('div');
+          catHeader.className = "mt-6 mb-3 text-xs font-bold text-slate-400 uppercase tracking-wider pl-1";
+          catHeader.innerText = currentCategory;
+          container.appendChild(catHeader);
+        }
+        const card = document.createElement('div');
+        card.className = `bg-white border ${item.isDone ? 'border-slate-100 opacity-40' : 'border-slate-100 shadow-2xs hover:shadow-xs'} rounded-2xl p-4.5 mb-2 flex justify-between items-center transition-all duration-300 transform origin-top`;
+        card.id = `todo-${item.rowIndex}`;
+        card.innerHTML = `
+          <div class="flex-1 pr-4">
+            <h3 class="text-base font-extrabold text-slate-955 leading-tight ${item.isDone ? 'line-through text-slate-400' : ''}">${item.task}</h3>
+            ${item.note ? `<p class="text-sm text-slate-500 font-medium mt-2.5 leading-relaxed">${item.note}</p>` : ''}
+          </div>
+          <div class="flex items-center justify-center pl-2 flex-shrink-0 space-x-1.5 h-full">
+            <button onclick="openTodoModal(${item.rowIndex})" class="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all focus:outline-none flex items-center justify-center cursor-pointer active:scale-90" title="編輯">
+              <span class="text-xs leading-none select-none">✎</span>
+            </button>
+            <input type="checkbox" ${item.isDone ? 'checked' : ''} onclick="toggleTodoArchive(${item.rowIndex}, this)" class="w-5.5 h-5.5 rounded-md border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer transition-transform duration-100 active:scale-90">
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // === 3. 打包頁面 ===
+    function renderPacking() {
+      const container = document.getElementById('mainContainer');
+      const hidePacked = document.getElementById('hideVisitedToggle').checked;
+      if (packingData.length === 0) { container.innerHTML = '<div class="text-center py-12 text-slate-400 text-sm">目前沒有打包清單</div>'; return; }
+      container.innerHTML = '';
+      
+      const packingEmojis = {
+        '衣物': '👕',
+        '3C': '📱',
+        '美妝盥洗': '🧴',
+        '隨身': '👜',
+        '行李': '🧳',
+        '藥品': '💊',
+        '重要證件': '🪪',
+        '特特行李': '🐕‍🦺',
+        '球場裝備': '⚾',
+        '車用': '🚗',
+        '文件': '🪪'
+      };
+
+      // 1. 過濾與分組資料
+      let grouped = {};
+      packingData.forEach(item => {
+        if (hidePacked && item.isPacked) return;
+        
+        let pTokens = item.person ? item.person.split(/[\n,，]+/).map(t => t.trim()) : [];
+        if (currentFilterGroup !== '全部' && !pTokens.includes(currentFilterGroup)) return;
+        
+        const cat = item.category || "其他";
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(item);
+      });
+      
+      const categories = Object.keys(grouped).sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+      
+      if (categories.length === 0) {
+        container.innerHTML = '<div class="text-center py-12 text-slate-400 text-sm">此分類下所有行李皆已打包！🧳✨</div>';
+        return;
+      }
+      
+      categories.forEach(cat => {
+        // 排序各類別下的項目 (按 rowIndex)
+        grouped[cat].sort((a, b) => a.rowIndex - b.rowIndex);
+        
+        const allItemsPacked = grouped[cat].every(item => item.isPacked);
+        
+        const card = document.createElement('div');
+        card.className = allItemsPacked 
+          ? "bg-slate-55 border border-slate-100 rounded-2xl p-4.5 mb-4 shadow-none opacity-80 transition-all duration-300"
+          : "bg-white border border-slate-100/80 rounded-2xl p-4.5 mb-4 shadow-3xs hover:shadow-2xs transition-all duration-300";
+        
+        let emoji = '📦';
+        const lowerCat = cat.toLowerCase();
+        for (const [key, val] of Object.entries(packingEmojis)) {
+          if (lowerCat.includes(key.toLowerCase())) {
+            emoji = val;
+            break;
+          }
+        }
+
+        let headerHtml = `
+          <div class="border-b border-slate-100 pb-1.5 mb-3.5 flex justify-between items-center select-none">
+            <span class="text-xs font-black uppercase tracking-wider text-slate-400 bg-slate-100 px-2 py-1 rounded inline-block mb-3.5 select-none">
+              ${allItemsPacked ? '<span class="text-emerald-500 mr-1.5 font-bold">✓</span>' : ''}
+              ${emoji} ${cat}
+            </span>
+            ${allItemsPacked ? '<span class="text-[10px] font-extrabold text-[#3a5240] bg-emerald-50/50 px-2 py-0.5 rounded-md mb-3.5">ALL PACKED</span>' : ''}
+          </div>
+        `;
+        
+        let itemsHtml = '<div class="divide-y divide-slate-100/60">';
+        grouped[cat].forEach(item => {
+          let badgesHtml = "";
+          if (currentFilterGroup === '全部' && item.person) {
+            let pTokens = item.person.split(/[\n,，]+/).map(t => t.trim());
+            pTokens.forEach(p => {
+              if (!p) return;
+              let colorClass = "bg-emerald-55/60 text-emerald-750 border border-emerald-100/50";
+              if (p === 'Jo') colorClass = "bg-indigo-50/70 text-indigo-650 border border-indigo-100/50";
+              else if (p === 'Will') colorClass = "bg-slate-100 text-slate-650 border border-slate-200/50";
+              badgesHtml += `<span class="inline-block ${colorClass} tracking-wider px-1.5 py-0.5 rounded text-[9px] font-bold ml-1.5">${p}</span>`;
+            });
+          }
+          
+          itemsHtml += `
+            <div id="packing-row-${item.rowIndex}" class="flex items-center justify-between py-2.5 transition-all duration-200 ${item.isPacked ? 'opacity-40' : ''}">
+              <div class="flex items-center space-x-2.5 min-w-0 flex-1 pr-2">
+                <input type="checkbox" ${item.isPacked ? 'checked' : ''} onclick="togglePackingArchive(${item.rowIndex}, this)" class="w-5 h-5 rounded border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer flex-shrink-0 transition-transform duration-100 active:scale-90">
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center flex-wrap gap-y-0.5">
+                    <span class="packing-title text-sm font-semibold text-slate-800 leading-tight ${item.isPacked ? 'line-through text-slate-400' : ''}">${item.item}</span>
+                    ${badgesHtml}
+                  </div>
+                  ${item.note ? `<p class="text-xs text-slate-400 mt-0.5 leading-relaxed">${item.note}</p>` : ''}
+                </div>
+              </div>
+              <button onclick="openPackingModal(${item.rowIndex})" class="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all flex items-center justify-center cursor-pointer active:scale-90 flex-shrink-0" title="編輯">
+                <span class="text-2xs leading-none select-none">✎</span>
+              </button>
+            </div>
+          `;
+        });
+        itemsHtml += '</div>';
+        
+        card.innerHTML = headerHtml + itemsHtml;
+        container.appendChild(card);
+      });
+    }
+
+    // === 4. 記帳頁面 ===
+    function renderExpenses() {
+      const container = document.getElementById('mainContainer');
+      container.innerHTML = '';
+      
+      // 1. 建立兩欄式容器架構 (手機單欄，電腦版雙欄)
+      const layoutGrid = document.createElement('div');
+      layoutGrid.className = "grid grid-cols-1 md:grid-cols-12 gap-6 items-start mt-2";
+      
+      const leftCol = document.createElement('div');
+      leftCol.className = "md:col-span-5 space-y-4";
+      
+      const rightCol = document.createElement('div');
+      rightCol.className = "md:col-span-7 space-y-3";
+      
+      layoutGrid.appendChild(leftCol);
+      layoutGrid.appendChild(rightCol);
+      container.appendChild(layoutGrid);
+
+      let totalTWD = 0, joPaidTWD = 0, willPaidTWD = 0, joShareTWD = 0, willShareTWD = 0;
+      let settlementOffsetTWD = 0;
+
+      expensesData.forEach(exp => {
+        let amt = parseFloat(exp.amount);
+        if (isNaN(amt)) amt = 0;
+        let amtTWD = exp.currency === 'USD' ? amt * fxRate : amt; 
+
+        if (exp.item && exp.item.includes("系統結清")) {
+          if (exp.paidBy === 'Jo') {
+            settlementOffsetTWD += amtTWD;
+          } else if (exp.paidBy === 'Will') {
+            settlementOffsetTWD -= amtTWD;
+          }
+          return;
+        }
+
+        totalTWD += amtTWD;
+        if (exp.paidBy === 'Jo') joPaidTWD += amtTWD;
+        if (exp.paidBy === 'Will') willPaidTWD += amtTWD;
+        
+        if (exp.split === 'Jo') {
+          joShareTWD += amtTWD;
+        } else if (exp.split === 'Will') {
+          willShareTWD += amtTWD;
+        } else {
+          joShareTWD += amtTWD / 2;
+          willShareTWD += amtTWD / 2;
+        }
+      });
+
+      let joOverage = (joPaidTWD - joShareTWD) + settlementOffsetTWD;
+      let settlementText = "";
+      let roundedOverage = Math.round(joOverage);
+      
+      if (Math.abs(roundedOverage) <= 1) {
+        settlementText = "兩不相欠";
+        joOverage = 0;
+      } else if (roundedOverage > 0) {
+        settlementText = `Will 應給 Jo $${roundedOverage.toLocaleString()}`;
+      } else {
+        settlementText = `Jo 應給 Will $${Math.abs(roundedOverage).toLocaleString()}`;
+      }
+
+      let clearBtnHtml = "";
+      if (Math.abs(joOverage) > 1) {
+        clearBtnHtml = `
+          <button onclick="handleClearSettlement(${Math.round(Math.abs(joOverage))}, '${joOverage > 0 ? 'Will' : 'Jo'}', '${joOverage > 0 ? 'Jo' : 'Will'}')" class="mt-2.5 px-3.5 py-1.5 text-xs font-black bg-white/20 hover:bg-white/30 text-white rounded-lg transition-all active:scale-95 cursor-pointer uppercase tracking-wider">
+            💵 點擊結清
+          </button>
+        `;
+      }
+
+      // 結清看板 (深藍灰漸層與微光毛玻璃質感)
+      const dashboard = document.createElement('div');
+      dashboard.className = "flex flex-col gap-3 text-center select-none"; 
+      dashboard.innerHTML = `
+        <div class="bg-gradient-to-br from-[#5a7384] to-[#455a68] text-white py-5 px-4 rounded-2xl flex flex-col justify-center items-center shadow-xs border border-white/10">
+          <span class="text-base font-extrabold leading-tight tracking-wide font-sans">${settlementText}</span>
+          ${clearBtnHtml}
+        </div>
+        
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-white border border-slate-100 p-3.5 rounded-2xl flex flex-col justify-center items-center shadow-3xs">
+            <span class="text-[10px] font-bold text-slate-400 tracking-wide uppercase select-none">JO 總花費</span>
+            <span class="text-base font-mono font-black text-slate-800 mt-1 leading-none">$${Math.round(joShareTWD).toLocaleString()}</span>
+          </div>
+          <div class="bg-white border border-slate-100 p-3.5 rounded-2xl flex flex-col justify-center items-center shadow-3xs">
+            <span class="text-[10px] font-bold text-slate-400 tracking-wide uppercase select-none">WILL 總花費</span>
+            <span class="text-base font-mono font-black text-slate-800 mt-1 leading-none">$${Math.round(willShareTWD).toLocaleString()}</span>
+          </div>
+        </div>
+      `;
+
+      // 快速記帳表單 (深藍灰漸層色搭配 Outfit 與中文 Inter，取消懸停動畫，使用方形格子)
+      const formCard = document.createElement('div');
+      formCard.className = "bg-gradient-to-br from-[#5a7384] to-[#455a68] text-slate-100 p-5 rounded-2xl shadow-sm border border-white/10";
+      formCard.innerHTML = `
+        <div class="space-y-3.5 text-slate-900">
+          <div class="grid grid-cols-5 gap-2">
+            <input type="text" id="exp-item" placeholder="品項名稱 (如: 麥當勞)" class="col-span-3 bg-white text-slate-800 text-sm font-semibold px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-white transition-all border border-slate-200/80 shadow-3xs">
+            <div class="col-span-2 relative flex items-center">
+              <input type="number" id="exp-amount" placeholder="金額" step="any" oninput="updateLiveExchange(this.value)" class="w-full bg-white text-slate-800 text-sm font-bold pl-3.5 pr-11 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-white transition-all border border-slate-200/80 shadow-3xs">
+              <button onclick="toggleFormCurrencyShort()" id="curr-toggle" type="button" class="absolute right-1 text-[10px] font-black bg-[#3d4f5b] text-white px-2 py-1 rounded-lg cursor-pointer select-none active:scale-95 transition-all">USD</button>
+            </div>
+          </div>
+          <div id="live-calc" class="text-2xs font-extrabold text-amber-200 px-1 hidden transition-all">-約合 TWD $0</div>
+          
+          <!-- 類別選項排版：使用 grid layout 撐滿寬度，解決分散與留白問題 -->
+          <div class="bg-[#3d4f5b]/40 p-1 rounded-xl grid grid-cols-7 gap-1 w-full">
+            <div onclick="setFormCategory('🍔')" id="formcat-🍔" class="w-full h-9 flex items-center justify-center text-base rounded-lg cursor-pointer select-none transition-all" title="美食">🍔</div>
+            <div onclick="setFormCategory('✈️')" id="formcat-✈️" class="w-full h-9 flex items-center justify-center text-base rounded-lg cursor-pointer select-none transition-all" title="機票">✈️</div>
+            <div onclick="setFormCategory('🛒')" id="formcat-🛒" class="w-full h-9 flex items-center justify-center text-base rounded-lg cursor-pointer select-none transition-all" title="購物">🛒</div>
+            <div onclick="setFormCategory('🚗')" id="formcat-🚗" class="w-full h-9 flex items-center justify-center text-base rounded-lg cursor-pointer select-none transition-all" title="交通">🚗</div>
+            <div onclick="setFormCategory('⚾')" id="formcat-⚾" class="w-full h-9 flex items-center justify-center text-base rounded-lg cursor-pointer select-none transition-all" title="球場">⚾</div>
+            <div onclick="setFormCategory('🏨')" id="formcat-🏨" class="w-full h-9 flex items-center justify-center text-base rounded-lg cursor-pointer select-none transition-all" title="住宿">🏨</div>
+            <div onclick="setFormCategory('❔')" id="formcat-❔" class="w-full h-9 flex items-center justify-center text-base rounded-lg cursor-pointer select-none transition-all" title="其他">❔</div>
+          </div>
+
+          <!-- 付款與分攤優化：採用與分類完全一致的單層無框線樣式，5:7 網格比例 -->
+          <div class="grid grid-cols-12 gap-2">
+            <!-- 付款人 -->
+            <div class="col-span-5 space-y-1">
+              <label class="block text-xs font-bold text-white tracking-wider pl-1 select-none">付款人</label>
+              <div class="bg-[#3d4f5b]/40 p-1 rounded-xl flex gap-1 w-full">
+                <div onclick="setFormPaidBy('Jo')" id="paid-Jo" class="flex-1 h-9 flex items-center justify-center text-xs font-black text-slate-200 rounded-lg cursor-pointer select-none transition-all hover:text-white uppercase tracking-wider">JO</div>
+                <div onclick="setFormPaidBy('Will')" id="paid-Will" class="flex-1 h-9 flex items-center justify-center text-xs font-black text-slate-200 rounded-lg cursor-pointer select-none transition-all hover:text-white uppercase tracking-wider">WILL</div>
+              </div>
+            </div>
+            <!-- 分攤 -->
+            <div class="col-span-7 space-y-1">
+              <label class="block text-xs font-bold text-white tracking-wider pl-1 select-none">分攤</label>
+              <div class="bg-[#3d4f5b]/40 p-1 rounded-xl flex gap-1 w-full">
+                <div onclick="setFormSplit('公用')" id="split-公用" class="flex-1 h-9 flex items-center justify-center text-[11px] font-bold text-slate-200 rounded-lg cursor-pointer select-none transition-all hover:text-white">公用</div>
+                <div onclick="setFormSplit('Jo')" id="split-Jo" class="flex-1 h-9 flex items-center justify-center text-xs font-black text-slate-200 rounded-lg cursor-pointer select-none transition-all hover:text-white uppercase tracking-wider">JO</div>
+                <div onclick="setFormSplit('Will')" id="split-Will" class="flex-1 h-9 flex items-center justify-center text-xs font-black text-slate-200 rounded-lg cursor-pointer select-none transition-all hover:text-white uppercase tracking-wider">WILL</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <input type="text" id="exp-note" placeholder="備註 (選填)" class="w-full bg-transparent text-white text-sm px-1 py-2 rounded-none outline-none border-b border-white/20 focus:border-white focus:ring-0 transition-all placeholder-slate-300/60">
+          </div>
+
+          <button onclick="submitExpenseForm()" id="submitExpBtn" class="w-full bg-white hover:bg-slate-50 text-[#2c3e4c] font-black text-sm py-2.5 rounded-xl tracking-wider uppercase text-center cursor-pointer select-none transition-all shadow-xs">送出記帳</button>
+        </div>
+      `;
+
+      leftCol.appendChild(dashboard);
+      leftCol.appendChild(formCard);
+
+      // 2. 計算分類圖表資料
+      let catTotals = {};
+      expensesData.forEach(exp => {
+        if (exp.item && exp.item.includes("系統結清")) return;
+        let amt = parseFloat(exp.amount);
+        if (isNaN(amt)) amt = 0;
+        let amtTWD = exp.currency === 'USD' ? amt * fxRate : amt;
+        let cat = iconMapping[exp.category] || (Object.values(iconMapping).includes(exp.category) ? exp.category : null) || '❔';
+        if (!catTotals[cat]) catTotals[cat] = 0;
+        catTotals[cat] += amtTWD;
+      });
+
+      let totalCatTWD = Object.values(catTotals).reduce((a, b) => a + b, 0);
+      let catArray = [];
+      for (let cat in catTotals) {
+        let amount = catTotals[cat];
+        let pct = totalCatTWD > 0 ? Math.round((amount / totalCatTWD) * 100) : 0;
+        catArray.push({ category: cat, amount: amount, percentage: pct });
+      }
+      catArray.sort((a, b) => b.amount - a.amount);
+
+      // 3. 建立統計圖表 DOM 節點
+      const chartWrapper = document.createElement('div');
+      chartWrapper.className = "mb-3.5 select-none";
+      
+       let chartItemsHtml = "";
+      if (catArray.length === 0) {
+        chartItemsHtml = `<div class="text-center py-4 text-slate-400 text-xs">暫無消費數據</div>`;
+      } else {
+        catArray.forEach(item => {
+          let conf = getCategoryChartColors(item.category);
+          chartItemsHtml += `
+            <div class="space-y-1">
+              <div class="flex justify-between items-baseline text-xs font-bold text-slate-700">
+                <div class="flex items-center space-x-1.5">
+                  <span class="w-5 text-center inline-block flex-shrink-0 select-none">${conf.emoji}</span>
+                  <span class="text-slate-800 font-semibold">${conf.name}</span>
+                </div>
+                <div class="flex items-center space-x-2 font-mono">
+                  <span class="text-slate-500 font-medium">$${Math.round(item.amount).toLocaleString()}</span>
+                  <span class="${conf.label} font-bold">${item.percentage}%</span>
+                </div>
+              </div>
+              <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                <div class="${conf.bar} h-full rounded-full transition-all duration-500" style="width: ${item.percentage}%"></div>
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      chartWrapper.innerHTML = `
+        <button onclick="toggleExpenseChart()" class="flex items-center text-xs font-bold text-slate-400 hover:text-slate-600 uppercase tracking-wider mb-2 mt-2 pl-1 select-none cursor-pointer transition-colors outline-none">
+          <span>📊 花費分類統計 (TWD)</span>
+          <span id="chart-arrow-icon" class="ml-1 text-[10px] inline-block transition-transform duration-200" style="transform: rotate(-90deg);">▼</span>
+        </button>
+        <div id="expense-chart-content" class="max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+          <div class="mt-1 bg-white border border-slate-100 p-4.5 rounded-2xl shadow-3xs space-y-3.5">
+            ${chartItemsHtml}
+          </div>
+        </div>
+      `;
+      rightCol.appendChild(chartWrapper);
+
+      // 設值初始化
+      setFormCategory(selectedFormCategory); 
+      toggleFormCurrency(selectedFormCurrency); 
+      setFormPaidBy(selectedFormPaidBy); 
+      setFormSplit(selectedFormSplit);
+      updateExpenseChartState();
+
+      // 📜 歷史消費明細標題
+      const historyHeader = document.createElement('div');
+      historyHeader.className = "text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 mt-2 pl-1 select-none"; 
+      historyHeader.innerText = "📜 歷史消費明細 (最新在上)";
+      rightCol.appendChild(historyHeader);
+
+      if (expensesData.length === 0) { 
+        const emptyDiv = document.createElement('div');
+        emptyDiv.className = "text-center py-12 text-slate-400 text-sm";
+        emptyDiv.innerText = "目前尚無記帳資料";
+        rightCol.appendChild(emptyDiv);
+        return; 
+      }
+
+      // 歷史明細卡片清單 (無懸停浮起動畫，採用 Outfit 搭配 font-mono)
+      expensesData.forEach(exp => {
+        const card = document.createElement('div'); 
+        card.className = `bg-white border border-slate-100 p-4.5 flex items-center justify-between rounded-2xl shadow-3xs ${
+          exp.rowIndex === -1 ? 'animate-pulse border-amber-300' : ''
+        }`;
+        
+        let icon = iconMapping[exp.category] || (Object.values(iconMapping).includes(exp.category) ? exp.category : null) || '❔';
+        let colorConfig = categoryColors[icon] || categoryColors['❔'];
+        
+        // 英文大寫的付款對象標籤
+        let displayBadge = `<span class="text-[9px] font-extrabold bg-slate-100 text-slate-500 border border-slate-200/50 px-2 py-0.5 rounded-md uppercase tracking-wider">${String(exp.paidBy).toUpperCase()} ➔ ${String(exp.split).toUpperCase()}</span>`;
+        
+        let amt = parseFloat(exp.amount);
+        if (isNaN(amt)) amt = 0;
+        let formattedAmt = exp.currency === 'USD' ? `$${amt.toFixed(2)} USD` : `$${Math.round(amt).toLocaleString()} TWD`;
+        
+        let twdSubtext = exp.currency === 'USD' 
+          ? `<div class="text-[10px] font-bold text-slate-400 font-mono mt-0.5">約 $${Math.round(amt * fxRate).toLocaleString()} TWD</div>` 
+          : '';
+
+        card.innerHTML = `
+          <div class="flex items-center min-w-0 flex-1">
+            <!-- 左側：分類主題圓圈圖標 -->
+            <div class="w-10 h-10 rounded-xl ${colorConfig.bg} ${colorConfig.text} flex items-center justify-center text-lg shadow-3xs mr-3 flex-shrink-0 select-none">
+              ${icon}
+            </div>
+            
+            <!-- 中間：品項名稱、付款與分攤資訊、備註 -->
+            <div class="flex-1 min-w-0 pr-3">
+              <h3 class="text-sm font-extrabold text-slate-800 truncate leading-tight">${exp.item}</h3>
+              <div class="flex items-center space-x-2 mt-1.5 flex-wrap gap-y-1">
+                ${displayBadge}
+                ${exp.note ? `<span class="text-xs text-slate-400 truncate max-w-[140px] font-semibold font-outfit">• ${exp.note}</span>` : ''}
+              </div>
+            </div>
+          </div>
+          
+          <!-- 右側：主要消費金額 與 美金折合台幣提示 -->
+          <div class="text-right flex-shrink-0">
+            <div class="text-sm font-black text-slate-900 font-mono leading-none">${formattedAmt}</div>
+            ${twdSubtext}
+          </div>
+        `;
+        rightCol.appendChild(card);
+      });
+    }
+
+    function setFormCategory(cat) {
+      selectedFormCategory = cat;
+      const cats = ['🍔', '✈️', '🛒', '🚗', '⚾', '🏨', '❔'];
+      cats.forEach(c => {
+        const el = document.getElementById('formcat-' + c);
+        if (el) {
+          const isSelected = c === cat;
+          if (isSelected) {
+            el.className = `w-full h-9 flex items-center justify-center bg-white text-slate-850 text-base rounded-lg font-black cursor-pointer select-none scale-105 shadow-3xs border-0 transition-all`;
+          } else {
+            el.className = `w-full h-9 flex items-center justify-center bg-transparent text-slate-200 text-base rounded-lg font-bold cursor-pointer select-none hover:text-white hover:bg-[#3d4f5b]/50 transition-all`;
+          }
+        }
+      });
+    }
+
+    function toggleFormCurrency(curr) {
+      selectedFormCurrency = curr;
+      const toggleBtn = document.getElementById('curr-toggle');
+      if (toggleBtn) {
+        toggleBtn.innerText = curr;
+      }
+      updateLiveExchange(document.getElementById('exp-amount')?.value || 0);
+    }
+
+    // 快速切換美金/台幣
+    function toggleFormCurrencyShort() {
+      const nextCurr = selectedFormCurrency === 'USD' ? 'TWD' : 'USD';
+      toggleFormCurrency(nextCurr);
+    }
+
+    // 付款人
+    function setFormPaidBy(person) {
+      selectedFormPaidBy = person;
+      const joEl = document.getElementById('paid-Jo');
+      const willEl = document.getElementById('paid-Will');
+      if(joEl && willEl) {
+        if (person === 'Jo') {
+          joEl.className = "flex-1 h-9 flex items-center justify-center text-xs font-black bg-white text-slate-800 rounded-lg cursor-pointer select-none transition-all shadow-3xs uppercase tracking-wider";
+          willEl.className = "flex-1 h-9 flex items-center justify-center text-xs font-black text-slate-200 rounded-lg cursor-pointer select-none transition-all hover:text-white uppercase tracking-wider";
+        } else {
+          joEl.className = "flex-1 h-9 flex items-center justify-center text-xs font-black text-slate-200 rounded-lg cursor-pointer select-none transition-all hover:text-white uppercase tracking-wider";
+          willEl.className = "flex-1 h-9 flex items-center justify-center text-xs font-black bg-white text-slate-800 rounded-lg cursor-pointer select-none transition-all shadow-3xs uppercase tracking-wider";
+        }
+      }
+    }
+
+    // 分攤人
+    function setFormSplit(type) {
+      selectedFormSplit = type;
+      const options = ['公用', 'Jo', 'Will'];
+      options.forEach(p => {
+        const el = document.getElementById('split-' + p);
+        if (el) {
+          const isName = p !== '公用';
+          const sizeClass = isName ? 'text-xs' : 'text-[11px]';
+          const formatClass = isName ? 'font-black uppercase tracking-wider' : 'font-bold';
+          if (p === type) {
+            el.className = `flex-1 h-9 flex items-center justify-center ${sizeClass} ${formatClass} bg-white text-slate-800 rounded-lg cursor-pointer select-none transition-all shadow-3xs`;
+          } else {
+            el.className = `flex-1 h-9 flex items-center justify-center ${sizeClass} ${formatClass} text-slate-200 rounded-lg cursor-pointer select-none transition-all hover:text-white`;
+          }
+        }
+      });
+    }
+
+    function updateLiveExchange(val) {
+      const calcDiv = document.getElementById('live-calc');
+      if (!calcDiv) return;
+      let num = parseFloat(val);
+      if (isNaN(num) || num <= 0 || selectedFormCurrency === 'TWD') {
+        calcDiv.classList.add('hidden');
+      } else {
+        calcDiv.classList.remove('hidden');
+        calcDiv.innerText = `約合 TWD $${Math.round(num * fxRate).toLocaleString()}`;
+      }
+    }
+
+    function getCategoryChartColors(cat) {
+      const mapping = {
+        '🍔': { name: '美食', emoji: '🍔' },
+        '✈️': { name: '機票', emoji: '✈️' },
+        '🛒': { name: '購物', emoji: '🛒' },
+        '🚗': { name: '交通', emoji: '🚗' },
+        '⚾': { name: '球場', emoji: '⚾' },
+        '🏨': { name: '住宿', emoji: '🏨' },
+        '❔': { name: '其他', emoji: '❔' }
+      };
+      let info = mapping[cat] || { name: cat, emoji: '❔' };
+      return {
+        bar: 'bg-[#5a7384]',
+        label: 'text-slate-700',
+        name: info.name,
+        emoji: info.emoji
+      };
+    }
+
+    function toggleExpenseChart() {
+      window.isExpenseChartExpanded = !window.isExpenseChartExpanded;
+      updateExpenseChartState();
+    }
+
+    function updateExpenseChartState() {
+      const content = document.getElementById('expense-chart-content');
+      const arrow = document.getElementById('chart-arrow-icon');
+      if (!content || !arrow) return;
+      if (window.isExpenseChartExpanded) {
+        content.style.maxHeight = content.scrollHeight + 'px';
+        arrow.style.transform = 'rotate(0deg)';
+      } else {
+        content.style.maxHeight = '0px';
+        arrow.style.transform = 'rotate(-90deg)';
+      }
+    }
+
+    // 記帳樂觀 UI 送出處理
+    function submitExpenseForm() {
+      const itemEl = document.getElementById('exp-item');
+      const amtEl = document.getElementById('exp-amount');
+      const noteEl = document.getElementById('exp-note');
+      const btn = document.getElementById('submitExpBtn');
+     
+      if (!itemEl || !amtEl || !itemEl.value.trim() || !amtEl.value) {
+        showToast('請填寫品項名稱與金額', 'error');
+        return;
+      }
+     
+      const originalExpenses = [...expensesData];
+      const item = itemEl.value.trim();
+      const amount = parseFloat(amtEl.value);
+      const note = noteEl ? noteEl.value.trim() : "";
+     
+      btn.innerText = "記帳送出中...";
+      btn.style.pointerEvents = "none";
+      btn.classList.add('opacity-50');
+     
+      // 1. 樂觀建立假資料插到最前面
+      const tempExpense = {
+        rowIndex: -1, // 假索引標記
+        category: selectedFormCategory,
+        item: item,
+        currency: selectedFormCurrency,
+        amount: amount,
+        paidBy: selectedFormPaidBy,
+        split: selectedFormSplit,
+        note: note
+      };
+      expensesData.unshift(tempExpense);
+      
+      // 2. 清空輸入欄位
+      itemEl.value = "";
+      amtEl.value = "";
+      if(noteEl) noteEl.value = "";
+      
+      // 3. 立即重繪 UI (零延遲看到結果)
+      renderExpenses();
+      showToast('已新增記帳 (寫入試算表中...)');
+
+      const formData = {
+        category: selectedFormCategory,
+        item: item,
+        currency: selectedFormCurrency,
+        amount: amount,
+        paidBy: selectedFormPaidBy,
+        split: selectedFormSplit,
+        note: note
+      };
+     
+      google.script.run
+        .withSuccessHandler(function(res) {
+          btn.innerText = "送出記帳";
+          btn.style.pointerEvents = "auto";
+          btn.classList.remove('opacity-50');
+          
+          if(res === "Success") {
+            // 背景靜默刷新真實資料 (修正假資料的 rowIndex)
+            google.script.run
+              .withSuccessHandler(function(response) {
+                if (response && response.expenses) {
+                  expensesData = response.expenses;
+                  if (currentTab === 'expenses') renderExpenses();
+                }
+              })
+              .getAllData();
+          } else {
+            // 寫入失敗回滾
+            expensesData = originalExpenses;
+            renderExpenses();
+            itemEl.value = item;
+            amtEl.value = amount;
+            if(noteEl) noteEl.value = note;
+            showToast("記帳失敗，已還原狀態", "error");
+          }
+        })
+        .withFailureHandler(function(err) {
+          btn.innerText = "送出記帳";
+          btn.style.pointerEvents = "auto";
+          btn.classList.remove('opacity-50');
+          
+          // 網路錯誤回滾
+          expensesData = originalExpenses;
+          renderExpenses();
+          itemEl.value = item;
+          amtEl.value = amount;
+          if(noteEl) noteEl.value = note;
+          showToast("網路異常: " + err.message, "error");
+        })
+        .addExpenseData(formData);
+    }
+
+    // === 5. 購物清單頁面 (排版與插圖排版優化) ===
+    function renderShopping() {
+      const container = document.getElementById('mainContainer');
+      const hideDone = document.getElementById('hideVisitedToggle').checked;
+      if (shoppingData.length === 0) { container.innerHTML = '<div class="text-center py-12 text-slate-400 text-sm">目前沒有購物清單</div>'; return; }
+      container.innerHTML = '';
+     
+      shoppingData.forEach(item => {
+        if (hideDone && item.isDone) return;
+       
+        let sTokens = item.store ? item.store.split(/[\n,，]+/).map(t => t.trim()) : [];
+        if (currentFilterGroup !== '全部' && !sTokens.includes(currentFilterGroup)) return;
+
+        let fTokens = item.forWhom ? item.forWhom.split(/[\n,，]+/).map(t => t.trim()) : [];
+
+        let storesHtml = "";
+        sTokens.forEach(s => {
+          if (s) storesHtml += `<span class="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200/50 px-2 py-0.5 rounded-full whitespace-nowrap">${s}</span>`;
+        });
+
+        let forWhomHtml = "";
+        fTokens.forEach(f => {
+          if (!f) return;
+          let colorClass = "bg-emerald-55 text-emerald-600 border border-emerald-100/50";
+          if (f === 'Jo') colorClass = "bg-indigo-50 text-indigo-600 border border-indigo-100/50";
+          else if (f === 'Will') colorClass = "bg-slate-100 text-slate-600 border border-slate-200/50";
+          else if (f === '特特') colorClass = "bg-amber-55 text-amber-700 border border-amber-200/50";
+          forWhomHtml += `<span class="text-[10px] font-bold ${colorClass} px-2.5 py-0.5 rounded-full select-none tracking-wider whitespace-nowrap">${f}</span>`;
+        });
+
+        let qtyText = item.quantity && item.quantity !== '1' ? `<span class="text-xs font-extrabold text-slate-800 bg-slate-100 border border-slate-200/50 px-1.5 py-0.5 rounded">×${item.quantity}</span>` : '';
+        let urlLink = item.url ? `<a href="${item.url}" target="_blank" class="text-sm hover:scale-120 active:scale-95 transition-transform inline-block select-none leading-none opacity-70 hover:opacity-100">🔗</a>` : '';
+
+        // === 1. 優化插圖排版與刪除生硬邊框，加入柔軟陰影與佔位設計 ===
+        let imgHtml = "";
+        if (item.image && item.image.startsWith('http')) {
+          imgHtml = `
+            <div class="relative flex-shrink-0 mr-3.5 select-none">
+              <!-- 取消硬性的 border border-slate-150，改用溫和的 shadow-2xs 與滑動微縮放效果 -->
+              <img src="${item.image}" onclick="openLightbox('${item.image}')" 
+                   class="w-14 h-14 object-cover rounded-xl shadow-2xs cursor-zoom-in hover:scale-105 active:scale-98 transition-all hover:opacity-90" 
+                   alt="thumbnail">
+            </div>
+          `;
+        } else {
+          // 若無插圖，自動以帶有微灰色背景的圓角禮物袋 (🛍️) 當作精美 Placeholder，維持排版整齊對齊
+          imgHtml = `
+            <div class="relative flex-shrink-0 mr-3.5 select-none">
+              <div class="w-14 h-14 rounded-xl bg-slate-100/80 flex items-center justify-center text-xl text-slate-400">
+                🛍️
+              </div>
+            </div>
+          `;
+        }
+
+        const card = document.createElement('div');
+        card.className = `bg-white border ${item.isDone ? 'border-slate-100 opacity-40' : 'border-slate-100 shadow-2xs hover:shadow-xs'} rounded-2xl p-4.5 mb-2 flex justify-between items-center transition-all duration-300 transform origin-top`;
+        card.id = `shopping-${item.rowIndex}`;
+       
+        card.innerHTML = `
+          <div class="flex-1 pr-4 min-w-0">
+            <div class="flex items-start">
+              ${imgHtml}
+              <div class="flex-1 min-w-0">
+                <div class="flex flex-wrap gap-1 mb-1.5">
+                  ${storesHtml}
+                  ${forWhomHtml}
+                </div>
+                <div class="flex items-center space-x-1.5 flex-wrap gap-y-1">
+                  <h3 class="text-base font-extrabold text-slate-900 leading-tight truncate ${item.isDone ? 'line-through text-slate-400' : ''}">${item.item}</h3>
+                  ${qtyText}
+                  ${urlLink}
+                </div>
+                ${item.note ? `<p class="text-sm text-slate-500 font-medium mt-1.5 leading-relaxed">${item.note}</p>` : ''}
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center justify-center pl-2 flex-shrink-0 space-x-1.5 h-full">
+            <button onclick="openShoppingModal(${item.rowIndex})" class="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all focus:outline-none flex items-center justify-center cursor-pointer active:scale-90" title="編輯">
+              <span class="text-xs leading-none select-none">✎</span>
+            </button>
+            <input type="checkbox" ${item.isDone ? 'checked' : ''} onclick="toggleShoppingArchive(${item.rowIndex}, this)" class="w-5.5 h-5.5 rounded-md border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer transition-transform duration-100 active:scale-90">
+          </div>
+        `;
+        container.appendChild(card);
+      });
+      if(container.innerHTML === '') {
+        container.innerHTML = '<div class="text-center py-12 text-slate-400 text-xs">該商店或此分類下的裝備都採購齊全了！🛒🛍️</div>';
+      }
+    }
+
+
+
+    // === Lightbox 控制 (優化動畫與背景溢出) ===
+    function openLightbox(imgUrl) {
+      const lightbox = document.getElementById('lightbox');
+      const lightboxImg = document.getElementById('lightbox-img');
+      lightboxImg.src = imgUrl;
+      lightbox.classList.remove('hidden');
+      lightboxImg.classList.add('animate-scale-up');
+      document.body.style.overflow = 'hidden';
+    }
+    
+    function closeLightbox() {
+      const lightbox = document.getElementById('lightbox');
+      const lightboxImg = document.getElementById('lightbox-img');
+      lightbox.classList.add('hidden');
+      lightboxImg.classList.remove('animate-scale-up');
+      document.body.style.overflow = '';
+    }
+
+    // === 樂觀 UI 封存與連動邏輯 (連動失敗將回滾狀態) ===
+    
+    // 1. 行程勾選 (樂觀 UI + 失敗回滾)
+    function toggleArchive(rowIndex, safeDayId, checkbox) {
+      const isChecked = checkbox.checked;
+      const backupState = itineraryData.map(item => ({ rowIndex: item.rowIndex, isVisited: item.isVisited }));
+
+      itineraryData.forEach(item => { if (item.rowIndex === rowIndex) item.isVisited = isChecked; });
+
+      const el = document.getElementById(`card-${rowIndex}-${safeDayId}`);
+      if (el) {
+        if (isChecked) {
+          el.classList.add('opacity-40');
+          el.querySelector('h3').classList.add('line-through', 'text-slate-400');
+        } else {
+          el.classList.remove('opacity-40');
+          el.querySelector('h3').classList.remove('line-through', 'text-slate-400');
+        }
+      }
+
+      // 立即更新天數錨點列的樣式與排序
+      renderItineraryAnchorBar();
+
+      const hideVisited = document.getElementById('hideVisitedToggle').checked;
+      if (hideVisited && isChecked && el) {
+        el.classList.add('scale-y-0', 'opacity-0', 'duration-300', 'transition-all');
+        setTimeout(renderItinerary, 250);
+      }
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res !== "Success") {
+            rollbackItinerary(backupState);
+            showToast("伺服器更新失敗，已還原行程狀態", "error");
+          }
+        })
+        .withFailureHandler(function(err) {
+          rollbackItinerary(backupState);
+          showToast("網路異常: " + err.message, "error");
+        })
+        .toggleVisitedStatus(rowIndex, isChecked);
+    }
+    
+    function rollbackItinerary(backup) {
+      itineraryData.forEach(item => {
+        const origin = backup.find(x => x.rowIndex === item.rowIndex);
+        if (origin) item.isVisited = origin.isVisited;
+      });
+      renderItinerary();
+    }
+
+    // 2. 待辦勾選 (樂觀 UI + 失敗回滾)
+    function toggleTodoArchive(rowIndex, checkbox) {
+      const isChecked = checkbox.checked;
+      const backupState = todoData.map(item => ({ rowIndex: item.rowIndex, isDone: item.isDone }));
+
+      const found = todoData.find(item => item.rowIndex === rowIndex);
+      if (found) found.isDone = isChecked;
+
+      const el = document.getElementById('todo-' + rowIndex);
+      if (el) {
+        if (isChecked) {
+          el.classList.add('opacity-40');
+          el.querySelector('h3').classList.add('line-through', 'text-slate-400');
+        } else {
+          el.classList.remove('opacity-40');
+          el.querySelector('h3').classList.remove('line-through', 'text-slate-400');
+        }
+      }
+
+      const hideDone = document.getElementById('hideVisitedToggle').checked;
+      if (hideDone && isChecked && el) {
+        el.classList.add('scale-y-0', 'opacity-0', 'duration-300', 'transition-all');
+        setTimeout(renderTodo, 250);
+      }
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res !== "Success") {
+            rollbackTodo(backupState);
+            showToast("伺服器更新失敗，已還原待辦狀態", "error");
+          }
+        })
+        .withFailureHandler(function(err) {
+          rollbackTodo(backupState);
+          showToast("網路異常: " + err.message, "error");
+        })
+        .toggleTodoStatus(rowIndex, isChecked);
+    }
+
+    function rollbackTodo(backup) {
+      todoData.forEach(item => {
+        const origin = backup.find(x => x.rowIndex === item.rowIndex);
+        if (origin) item.isDone = origin.isDone;
+      });
+      renderTodo();
+    }
+
+    // 3. 打包勾選 (樂觀 UI + 失敗回滾)
+    function togglePackingArchive(rowIndex, checkbox) {
+      const isChecked = checkbox.checked;
+      const backupState = packingData.map(item => ({ rowIndex: item.rowIndex, isPacked: item.isPacked }));
+
+      const found = packingData.find(item => item.rowIndex === rowIndex);
+      if (found) found.isPacked = isChecked;
+
+      const el = document.getElementById('packing-row-' + rowIndex);
+      if (el) {
+        if (isChecked) {
+          el.classList.add('opacity-40');
+          const titleSpan = el.querySelector('.packing-title');
+          if (titleSpan) titleSpan.classList.add('line-through', 'text-slate-400');
+        } else {
+          el.classList.remove('opacity-40');
+          const titleSpan = el.querySelector('.packing-title');
+          if (titleSpan) titleSpan.classList.remove('line-through', 'text-slate-400');
+        }
+      }
+
+      const hidePacked = document.getElementById('hideVisitedToggle').checked;
+      if (hidePacked && isChecked && el) {
+        el.classList.add('scale-y-0', 'opacity-0', 'duration-300', 'transition-all');
+        setTimeout(renderPacking, 250);
+      } else {
+        setTimeout(renderPacking, 250);
+      }
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res !== "Success") {
+            rollbackPacking(backupState);
+            showToast("伺服器更新失敗，已還原打包狀態", "error");
+          }
+        })
+        .withFailureHandler(function(err) {
+          rollbackPacking(backupState);
+          showToast("網路異常: " + err.message, "error");
+        })
+        .togglePackingStatus(rowIndex, isChecked);
+    }
+
+    function rollbackPacking(backup) {
+      packingData.forEach(item => {
+        const origin = backup.find(x => x.rowIndex === item.rowIndex);
+        if (origin) item.isPacked = origin.isPacked;
+      });
+      renderPacking();
+    }
+
+    // 4. 購物勾選 (樂觀 UI + 失敗回滾)
+    function toggleShoppingArchive(rowIndex, checkbox) {
+      const isChecked = checkbox.checked;
+      const backupState = shoppingData.map(item => ({ rowIndex: item.rowIndex, isDone: item.isDone }));
+
+      const found = shoppingData.find(item => item.rowIndex === rowIndex);
+      if (found) found.isDone = isChecked;
+
+      const el = document.getElementById('shopping-' + rowIndex);
+      if (el) {
+        if (isChecked) {
+          el.classList.add('opacity-40');
+          el.querySelector('h3').classList.add('line-through', 'text-slate-400');
+        } else {
+          el.classList.remove('opacity-40');
+          el.querySelector('h3').classList.remove('line-through', 'text-slate-400');
+        }
+      }
+
+      const hideDone = document.getElementById('hideVisitedToggle').checked;
+      if (hideDone && isChecked && el) {
+        el.classList.add('scale-y-0', 'opacity-0', 'duration-300', 'transition-all');
+        setTimeout(renderShopping, 250);
+      }
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res !== "Success") {
+            rollbackShopping(backupState);
+            showToast("伺服器更新失敗，已還原購物清單狀態", "error");
+          }
+        })
+        .withFailureHandler(function(err) {
+          rollbackShopping(backupState);
+          showToast("網路異常: " + err.message, "error");
+        })
+        .toggleShoppingStatus(rowIndex, isChecked);
+    }
+
+    function rollbackShopping(backup) {
+      shoppingData.forEach(item => {
+        const origin = backup.find(x => x.rowIndex === item.rowIndex);
+        if (origin) item.isDone = origin.isDone;
+      });
+      renderShopping();
+    }
+
+    // === Modal Animations ===
+    function animateModalOpen(modalId) {
+      const modal = document.getElementById(modalId);
+      if (!modal) return;
+      modal.classList.remove('hidden');
+      requestAnimationFrame(() => {
+        modal.classList.remove('opacity-0');
+        const dialog = modal.querySelector('div');
+        if (dialog) dialog.classList.remove('translate-y-10');
+      });
+    }
+
+    function animateModalClose(modalId) {
+      const modal = document.getElementById(modalId);
+      if (!modal) return;
+      modal.classList.add('opacity-0');
+      const dialog = modal.querySelector('div');
+      if (dialog) dialog.classList.add('translate-y-10');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+      }, 200);
+    }
+
+    // === Itinerary Modal Controllers ===
+    function openItineraryModal(rowIndex = null) {
+      const form = document.getElementById('itinerary-form');
+      if (!form) return;
+      form.reset();
+      
+      const titleEl = document.getElementById('itinerary-modal-title');
+      const deleteBtn = document.getElementById('iti-delete-btn');
+      
+      if (!rowIndex) {
+        document.getElementById('iti-rowIndex').value = "";
+        document.getElementById('iti-isVisited').value = "false";
+        
+        let defaultDay = "Day 1";
+        if (itineraryData.length > 0) {
+          defaultDay = itineraryData[itineraryData.length - 1].day;
+        }
+        document.getElementById('iti-day').value = defaultDay;
+        document.getElementById('iti-time').value = "";
+        document.getElementById('iti-type').value = "景點";
+        document.getElementById('iti-title').value = "";
+        document.getElementById('iti-content').value = "";
+        document.getElementById('iti-links').value = "";
+        
+        if (titleEl) titleEl.innerText = "新增行程項目";
+        if (deleteBtn) deleteBtn.classList.add('hidden');
+      } else {
+        const item = itineraryData.find(x => x.rowIndex === rowIndex);
+        if (!item) return;
+        
+        document.getElementById('iti-rowIndex').value = item.rowIndex;
+        document.getElementById('iti-isVisited').value = item.isVisited;
+        document.getElementById('iti-day').value = item.day || "";
+        document.getElementById('iti-time').value = item.time || "";
+        document.getElementById('iti-type').value = item.type || "景點";
+        document.getElementById('iti-title').value = item.title || "";
+        document.getElementById('iti-content').value = (item.content || "").replace(/<br>/g, '\n');
+        document.getElementById('iti-links').value = item.links || "";
+        
+        if (titleEl) titleEl.innerText = "編輯行程項目";
+        if (deleteBtn) deleteBtn.classList.remove('hidden');
+      }
+      
+      animateModalOpen('modal-itinerary');
+    }
+
+    function closeItineraryModal() {
+      animateModalClose('modal-itinerary');
+    }
+
+    function submitItineraryForm() {
+      const rowIndexVal = document.getElementById('iti-rowIndex').value;
+      const rowIndex = rowIndexVal ? parseInt(rowIndexVal) : 0;
+      const isVisited = document.getElementById('iti-isVisited').value === "true" || document.getElementById('iti-isVisited').value === true;
+      const day = document.getElementById('iti-day').value.trim();
+      const time = document.getElementById('iti-time').value.trim();
+      const type = document.getElementById('iti-type').value;
+      const title = document.getElementById('iti-title').value.trim();
+      const content = document.getElementById('iti-content').value.trim();
+      const links = document.getElementById('iti-links').value.trim();
+      
+      if (!day || !title) {
+        showToast("請填寫天數與名稱/標題", "error");
+        return;
+      }
+      
+      const saveBtn = document.getElementById('iti-save-btn');
+      if (saveBtn) {
+        saveBtn.innerText = "儲存中...";
+        saveBtn.style.pointerEvents = "none";
+        saveBtn.classList.add('opacity-50');
+      }
+      
+      const backup = JSON.parse(JSON.stringify(itineraryData));
+      
+      const formData = {
+        rowIndex: rowIndex,
+        isVisited: isVisited,
+        day: day,
+        time: time,
+        type: type,
+        title: title,
+        content: content,
+        links: links
+      };
+      
+      const contentHtml = content.replace(/\n/g, '<br>');
+      let routingPlace = "";
+      if (links) {
+        routingPlace = extractPlaceForRouting(links, title);
+      }
+      
+      if (rowIndex > 1) {
+        itineraryData = itineraryData.map(item => {
+          if (item.rowIndex === rowIndex) {
+            return {
+              ...item,
+              day: day,
+              time: time,
+              type: type,
+              title: title,
+              content: contentHtml,
+              links: links,
+              routingPlace: routingPlace
+            };
+          }
+          return item;
+        });
+      } else {
+        const newItem = {
+          rowIndex: -1,
+          day: day,
+          date: "",
+          time: time,
+          type: type,
+          title: title,
+          content: contentHtml,
+          links: links,
+          routingPlace: routingPlace,
+          isVisited: isVisited
+        };
+        itineraryData.push(newItem);
+      }
+      
+      sortItineraryData(itineraryData);
+      
+      renderItinerary();
+      closeItineraryModal();
+      showToast("儲存成功，正在同步至 Sheet...");
+      
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (saveBtn) {
+            saveBtn.innerText = "儲存";
+            saveBtn.style.pointerEvents = "auto";
+            saveBtn.classList.remove('opacity-50');
+          }
+          if (res === "Success") {
+            google.script.run
+              .withSuccessHandler(function(response) {
+                if (response && response.itinerary) {
+                  itineraryData = response.itinerary;
+                  if (currentTab === 'itinerary') renderItinerary();
+                }
+              })
+              .getAllData();
+          } else {
+            itineraryData = backup;
+            renderItinerary();
+            showToast("伺服器同步失敗: " + res, "error");
+          }
+        })
+        .withFailureHandler(function(err) {
+          if (saveBtn) {
+            saveBtn.innerText = "儲存";
+            saveBtn.style.pointerEvents = "auto";
+            saveBtn.classList.remove('opacity-50');
+          }
+          itineraryData = backup;
+          renderItinerary();
+          showToast("網路異常: " + err.message, "error");
+        })
+        .saveItineraryData(formData);
+    }
+
+    function deleteItinerary() {
+      const rowIndexVal = document.getElementById('iti-rowIndex').value;
+      const rowIndex = rowIndexVal ? parseInt(rowIndexVal) : 0;
+      if (rowIndex <= 1) return;
+      
+      if (!confirm("確定要刪除此行程項目嗎？")) return;
+      
+      closeItineraryModal();
+      const backup = JSON.parse(JSON.stringify(itineraryData));
+      
+      itineraryData = itineraryData.filter(item => item.rowIndex !== rowIndex);
+      renderItinerary();
+      showToast("正在從 Sheet 刪除...");
+      
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res === "Success") {
+            google.script.run
+              .withSuccessHandler(function(response) {
+                if (response && response.itinerary) {
+                  itineraryData = response.itinerary;
+                  if (currentTab === 'itinerary') renderItinerary();
+                }
+              })
+              .getAllData();
+            showToast("刪除成功");
+          } else {
+            itineraryData = backup;
+            renderItinerary();
+            showToast("刪除失敗: " + res, "error");
+          }
+        })
+        .withFailureHandler(function(err) {
+          itineraryData = backup;
+          renderItinerary();
+          showToast("網路異常: " + err.message, "error");
+        })
+        .deleteItineraryData(rowIndex);
+    }
+
+    // === Todo Modal Controllers ===
+    function openTodoModal(rowIndex = null) {
+      const form = document.getElementById('todo-form');
+      if (!form) return;
+      form.reset();
+      
+      const titleEl = document.getElementById('todo-modal-title');
+      const deleteBtn = document.getElementById('todo-delete-btn');
+      
+      if (!rowIndex) {
+        document.getElementById('todo-rowIndex').value = "";
+        document.getElementById('todo-isDone').value = "false";
+        
+        let defaultCat = "行前準備";
+        if (todoData.length > 0) {
+          defaultCat = todoData[todoData.length - 1].category;
+        }
+        document.getElementById('todo-category').value = defaultCat;
+        document.getElementById('todo-task').value = "";
+        document.getElementById('todo-note').value = "";
+        
+        if (titleEl) titleEl.innerText = "新增待辦事項";
+        if (deleteBtn) deleteBtn.classList.add('hidden');
+      } else {
+        const item = todoData.find(x => x.rowIndex === rowIndex);
+        if (!item) return;
+        
+        document.getElementById('todo-rowIndex').value = item.rowIndex;
+        document.getElementById('todo-isDone').value = item.isDone;
+        document.getElementById('todo-category').value = item.category || "";
+        document.getElementById('todo-task').value = item.task || "";
+        document.getElementById('todo-note').value = item.note || "";
+        
+        if (titleEl) titleEl.innerText = "編輯待辦事項";
+        if (deleteBtn) deleteBtn.classList.remove('hidden');
+      }
+      
+      animateModalOpen('modal-todo');
+    }
+
+    function closeTodoModal() {
+      animateModalClose('modal-todo');
+    }
+
+    function submitTodoForm() {
+      const rowIndexVal = document.getElementById('todo-rowIndex').value;
+      const rowIndex = rowIndexVal ? parseInt(rowIndexVal) : 0;
+      const isDone = document.getElementById('todo-isDone').value === "true" || document.getElementById('todo-isDone').value === true;
+      const category = document.getElementById('todo-category').value.trim();
+      const task = document.getElementById('todo-task').value.trim();
+      const note = document.getElementById('todo-note').value.trim();
+      
+      if (!category || !task) {
+        showToast("請填寫分類與待辦任務", "error");
+        return;
+      }
+      
+      const saveBtn = document.getElementById('todo-save-btn');
+      if (saveBtn) {
+        saveBtn.innerText = "儲存中...";
+        saveBtn.style.pointerEvents = "none";
+        saveBtn.classList.add('opacity-50');
+      }
+      
+      const backup = JSON.parse(JSON.stringify(todoData));
+      
+      const formData = {
+        rowIndex: rowIndex,
+        isDone: isDone,
+        category: category,
+        task: task,
+        note: note
+      };
+      
+      if (rowIndex > 1) {
+        todoData = todoData.map(item => {
+          if (item.rowIndex === rowIndex) {
+            return {
+              ...item,
+              category: category,
+              task: task,
+              note: note
+            };
+          }
+          return item;
+        });
+      } else {
+        const newItem = {
+          rowIndex: -1,
+          category: category,
+          task: task,
+          note: note,
+          isDone: isDone
+        };
+        todoData.push(newItem);
+      }
+      
+      renderTodo();
+      closeTodoModal();
+      showToast("儲存成功，正在同步至 Sheet...");
+      
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (saveBtn) {
+            saveBtn.innerText = "儲存";
+            saveBtn.style.pointerEvents = "auto";
+            saveBtn.classList.remove('opacity-50');
+          }
+          if (res === "Success") {
+            google.script.run
+              .withSuccessHandler(function(response) {
+                if (response && response.todo) {
+                  todoData = response.todo;
+                  if (currentTab === 'todo') renderTodo();
+                }
+              })
+              .getAllData();
+          } else {
+            todoData = backup;
+            renderTodo();
+            showToast("伺服器同步失敗: " + res, "error");
+          }
+        })
+        .withFailureHandler(function(err) {
+          if (saveBtn) {
+            saveBtn.innerText = "儲存";
+            saveBtn.style.pointerEvents = "auto";
+            saveBtn.classList.remove('opacity-50');
+          }
+          todoData = backup;
+          renderTodo();
+          showToast("網路異常: " + err.message, "error");
+        })
+        .saveTodoData(formData);
+    }
+
+    function deleteTodo() {
+      const rowIndexVal = document.getElementById('todo-rowIndex').value;
+      const rowIndex = rowIndexVal ? parseInt(rowIndexVal) : 0;
+      if (rowIndex <= 1) return;
+      
+      if (!confirm("確定要刪除此待辦事項嗎？")) return;
+      
+      closeTodoModal();
+      const backup = JSON.parse(JSON.stringify(todoData));
+      
+      todoData = todoData.filter(item => item.rowIndex !== rowIndex);
+      renderTodo();
+      showToast("正在從 Sheet 刪除...");
+      
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res === "Success") {
+            google.script.run
+              .withSuccessHandler(function(response) {
+                if (response && response.todo) {
+                  todoData = response.todo;
+                  if (currentTab === 'todo') renderTodo();
+                }
+              })
+              .getAllData();
+            showToast("刪除成功");
+          } else {
+            todoData = backup;
+            renderTodo();
+            showToast("刪除失敗: " + res, "error");
+          }
+        })
+        .withFailureHandler(function(err) {
+          todoData = backup;
+          renderTodo();
+          showToast("網路異常: " + err.message, "error");
+        })
+        .deleteTodoData(rowIndex);
+    }
+
+    // === Packing Modal Controllers ===
+    function openPackingModal(rowIndex = null) {
+      const form = document.getElementById('packing-form');
+      if (!form) return;
+      form.reset();
+      
+      const titleEl = document.getElementById('packing-modal-title');
+      const deleteBtn = document.getElementById('packing-delete-btn');
+      
+      if (!rowIndex) {
+        document.getElementById('packing-rowIndex').value = "";
+        document.getElementById('packing-isPacked').value = "false";
+        
+        let defaultCat = "衣物";
+        let defaultPerson = "公用";
+        if (packingData.length > 0) {
+          defaultCat = packingData[packingData.length - 1].category;
+          defaultPerson = packingData[packingData.length - 1].person;
+        }
+        document.getElementById('packing-category').value = defaultCat;
+        document.getElementById('packing-person').value = defaultPerson;
+        document.getElementById('packing-item').value = "";
+        document.getElementById('packing-note').value = "";
+        
+        if (titleEl) titleEl.innerText = "新增打包行李";
+        if (deleteBtn) deleteBtn.classList.add('hidden');
+      } else {
+        const item = packingData.find(x => x.rowIndex === rowIndex);
+        if (!item) return;
+        
+        document.getElementById('packing-rowIndex').value = item.rowIndex;
+        document.getElementById('packing-isPacked').value = item.isPacked;
+        document.getElementById('packing-category').value = item.category || "";
+        document.getElementById('packing-person').value = item.person || "";
+        document.getElementById('packing-item').value = item.item || "";
+        document.getElementById('packing-note').value = item.note || "";
+        
+        if (titleEl) titleEl.innerText = "編輯打包行李";
+        if (deleteBtn) deleteBtn.classList.remove('hidden');
+      }
+      
+      animateModalOpen('modal-packing');
+    }
+
+    function closePackingModal() {
+      animateModalClose('modal-packing');
+    }
+
+    function submitPackingForm() {
+      const rowIndexVal = document.getElementById('packing-rowIndex').value;
+      const rowIndex = rowIndexVal ? parseInt(rowIndexVal) : 0;
+      const isPacked = document.getElementById('packing-isPacked').value === "true" || document.getElementById('packing-isPacked').value === true;
+      const category = document.getElementById('packing-category').value.trim();
+      const person = document.getElementById('packing-person').value.trim();
+      const item = document.getElementById('packing-item').value.trim();
+      const note = document.getElementById('packing-note').value.trim();
+      
+      if (!category || !person || !item) {
+        showToast("請填寫分類、準備人與物品名稱", "error");
+        return;
+      }
+      
+      const saveBtn = document.getElementById('packing-save-btn');
+      if (saveBtn) {
+        saveBtn.innerText = "儲存中...";
+        saveBtn.style.pointerEvents = "none";
+        saveBtn.classList.add('opacity-50');
+      }
+      
+      const backup = JSON.parse(JSON.stringify(packingData));
+      
+      const formData = {
+        rowIndex: rowIndex,
+        isPacked: isPacked,
+        category: category,
+        person: person,
+        item: item,
+        note: note
+      };
+      
+      if (rowIndex > 1) {
+        packingData = packingData.map(x => {
+          if (x.rowIndex === rowIndex) {
+            return {
+              ...x,
+              category: category,
+              person: person,
+              item: item,
+              note: note
+            };
+          }
+          return x;
+        });
+      } else {
+        const newItem = {
+          rowIndex: -1,
+          category: category,
+          person: person,
+          item: item,
+          note: note,
+          isPacked: isPacked
+        };
+        packingData.push(newItem);
+      }
+      
+      renderPacking();
+      closePackingModal();
+      showToast("儲存成功，正在同步至 Sheet...");
+      
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (saveBtn) {
+            saveBtn.innerText = "儲存";
+            saveBtn.style.pointerEvents = "auto";
+            saveBtn.classList.remove('opacity-50');
+          }
+          if (res === "Success") {
+            google.script.run
+              .withSuccessHandler(function(response) {
+                if (response && response.packing) {
+                  packingData = response.packing;
+                  updateSubControlMenu();
+                  if (currentTab === 'packing') renderPacking();
+                }
+              })
+              .getAllData();
+          } else {
+            packingData = backup;
+            renderPacking();
+            showToast("伺服器同步失敗: " + res, "error");
+          }
+        })
+        .withFailureHandler(function(err) {
+          if (saveBtn) {
+            saveBtn.innerText = "儲存";
+            saveBtn.style.pointerEvents = "auto";
+            saveBtn.classList.remove('opacity-50');
+          }
+          packingData = backup;
+          renderPacking();
+          showToast("網路異常: " + err.message, "error");
+        })
+        .savePackingData(formData);
+    }
+
+    function deletePacking() {
+      const rowIndexVal = document.getElementById('packing-rowIndex').value;
+      const rowIndex = rowIndexVal ? parseInt(rowIndexVal) : 0;
+      if (rowIndex <= 1) return;
+      
+      if (!confirm("確定要刪除此物品嗎？")) return;
+      
+      closePackingModal();
+      const backup = JSON.parse(JSON.stringify(packingData));
+      
+      packingData = packingData.filter(item => item.rowIndex !== rowIndex);
+      renderPacking();
+      showToast("正在從 Sheet 刪除...");
+      
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res === "Success") {
+            google.script.run
+              .withSuccessHandler(function(response) {
+                if (response && response.packing) {
+                  packingData = response.packing;
+                  updateSubControlMenu();
+                  if (currentTab === 'packing') renderPacking();
+                }
+              })
+              .getAllData();
+            showToast("刪除成功");
+          } else {
+            packingData = backup;
+            renderPacking();
+            showToast("刪除失敗: " + res, "error");
+          }
+        })
+        .withFailureHandler(function(err) {
+          packingData = backup;
+          renderPacking();
+          showToast("網路異常: " + err.message, "error");
+        })
+        .deletePackingData(rowIndex);
+    }
+
+    // === Shopping Modal Controllers ===
+    function openShoppingModal(rowIndex = null) {
+      const form = document.getElementById('shopping-form');
+      if (!form) return;
+      form.reset();
+      
+      const titleEl = document.getElementById('shopping-modal-title');
+      const deleteBtn = document.getElementById('shop-delete-btn');
+      
+      if (!rowIndex) {
+        document.getElementById('shop-rowIndex').value = "";
+        document.getElementById('shop-isDone').value = "false";
+        
+        let defaultStore = "Costco";
+        let defaultFor = "公用";
+        if (shoppingData.length > 0) {
+          defaultStore = shoppingData[shoppingData.length - 1].store;
+          defaultFor = shoppingData[shoppingData.length - 1].forWhom;
+        }
+        document.getElementById('shop-store').value = defaultStore;
+        document.getElementById('shop-forWhom').value = defaultFor;
+        document.getElementById('shop-item').value = "";
+        document.getElementById('shop-quantity').value = "1";
+        document.getElementById('shop-image').value = "";
+        document.getElementById('shop-url').value = "";
+        document.getElementById('shop-note').value = "";
+        
+        if (titleEl) titleEl.innerText = "新增購物項目";
+        if (deleteBtn) deleteBtn.classList.add('hidden');
+      } else {
+        const item = shoppingData.find(x => x.rowIndex === rowIndex);
+        if (!item) return;
+        
+        document.getElementById('shop-rowIndex').value = item.rowIndex;
+        document.getElementById('shop-isDone').value = item.isDone;
+        document.getElementById('shop-store').value = item.store || "";
+        document.getElementById('shop-forWhom').value = item.forWhom || "";
+        document.getElementById('shop-item').value = item.item || "";
+        document.getElementById('shop-quantity').value = item.quantity || "1";
+        document.getElementById('shop-image').value = item.image || "";
+        document.getElementById('shop-url').value = item.url || "";
+        document.getElementById('shop-note').value = item.note || "";
+        
+        if (titleEl) titleEl.innerText = "編輯購物項目";
+        if (deleteBtn) deleteBtn.classList.remove('hidden');
+      }
+      
+      animateModalOpen('modal-shopping');
+    }
+
+    function closeShoppingModal() {
+      animateModalClose('modal-shopping');
+    }
+
+    function submitShoppingForm() {
+      const rowIndexVal = document.getElementById('shop-rowIndex').value;
+      const rowIndex = rowIndexVal ? parseInt(rowIndexVal) : 0;
+      const isDone = document.getElementById('shop-isDone').value === "true" || document.getElementById('shop-isDone').value === true;
+      const store = document.getElementById('shop-store').value.trim();
+      const forWhom = document.getElementById('shop-forWhom').value.trim();
+      const item = document.getElementById('shop-item').value.trim();
+      const quantity = document.getElementById('shop-quantity').value.trim();
+      const image = document.getElementById('shop-image').value.trim();
+      const url = document.getElementById('shop-url').value.trim();
+      const note = document.getElementById('shop-note').value.trim();
+      
+      if (!store || !forWhom || !item || !quantity) {
+        showToast("請填寫商店、購買對象、物品名稱與數量", "error");
+        return;
+      }
+      
+      const saveBtn = document.getElementById('shop-save-btn');
+      if (saveBtn) {
+        saveBtn.innerText = "儲存中...";
+        saveBtn.style.pointerEvents = "none";
+        saveBtn.classList.add('opacity-50');
+      }
+      
+      const backup = JSON.parse(JSON.stringify(shoppingData));
+      
+      const formData = {
+        rowIndex: rowIndex,
+        isDone: isDone,
+        store: store,
+        forWhom: forWhom,
+        item: item,
+        quantity: quantity,
+        image: image,
+        url: url,
+        note: note
+      };
+      
+      if (rowIndex > 1) {
+        shoppingData = shoppingData.map(x => {
+          if (x.rowIndex === rowIndex) {
+            return {
+              ...x,
+              store: store,
+              forWhom: forWhom,
+              item: item,
+              quantity: quantity,
+              image: image,
+              url: url,
+              note: note
+            };
+          }
+          return x;
+        });
+      } else {
+        const newItem = {
+          rowIndex: -1,
+          store: store,
+          forWhom: forWhom,
+          item: item,
+          quantity: quantity,
+          image: image,
+          url: url,
+          note: note,
+          isDone: isDone
+        };
+        shoppingData.push(newItem);
+      }
+      
+      renderShopping();
+      closeShoppingModal();
+      showToast("儲存成功，正在同步至 Sheet...");
+      
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (saveBtn) {
+            saveBtn.innerText = "儲存";
+            saveBtn.style.pointerEvents = "auto";
+            saveBtn.classList.remove('opacity-50');
+          }
+          if (res === "Success") {
+            google.script.run
+              .withSuccessHandler(function(response) {
+                if (response && response.shopping) {
+                  shoppingData = response.shopping;
+                  updateSubControlMenu();
+                  if (currentTab === 'shopping') renderShopping();
+                }
+              })
+              .getAllData();
+          } else {
+            shoppingData = backup;
+            renderShopping();
+            showToast("伺服器同步失敗: " + res, "error");
+          }
+        })
+        .withFailureHandler(function(err) {
+          if (saveBtn) {
+            saveBtn.innerText = "儲存";
+            saveBtn.style.pointerEvents = "auto";
+            saveBtn.classList.remove('opacity-50');
+          }
+          shoppingData = backup;
+          renderShopping();
+          showToast("網路異常: " + err.message, "error");
+        })
+        .saveShoppingData(formData);
+    }
+
+    function deleteShopping() {
+      const rowIndexVal = document.getElementById('shop-rowIndex').value;
+      const rowIndex = rowIndexVal ? parseInt(rowIndexVal) : 0;
+      if (rowIndex <= 1) return;
+      
+      if (!confirm("確定要刪除此購物項目嗎？")) return;
+      
+      closeShoppingModal();
+      const backup = JSON.parse(JSON.stringify(shoppingData));
+      
+      shoppingData = shoppingData.filter(item => item.rowIndex !== rowIndex);
+      renderShopping();
+      showToast("正在從 Sheet 刪除...");
+      
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res === "Success") {
+            google.script.run
+              .withSuccessHandler(function(response) {
+                if (response && response.shopping) {
+                  shoppingData = response.shopping;
+                  updateSubControlMenu();
+                  if (currentTab === 'shopping') renderShopping();
+                }
+              })
+              .getAllData();
+            showToast("刪除成功");
+          } else {
+            shoppingData = backup;
+            renderShopping();
+            showToast("刪除失敗: " + res, "error");
+          }
+        })
+        .withFailureHandler(function(err) {
+          shoppingData = backup;
+          renderShopping();
+          showToast("網路異常: " + err.message, "error");
+        })
+        .deleteShoppingData(rowIndex);
+    }
+function handleClearSettlement(amount, fromPerson, toPerson) {
+      if (!confirm(`確定 ${fromPerson} 已實際轉帳 $${amount.toLocaleString()} 給 ${toPerson}，並將看板歸零嗎？\n(此操作將自動寫入一筆結清平帳紀錄)`)) return;
+      
+      showToast("正在寫入平帳紀錄...");
+      
+      const formData = {
+        category: "其他",
+        item: `系統結清：${fromPerson} 轉帳給 ${toPerson}`,
+        currency: "TWD",
+        amount: amount,
+        paidBy: fromPerson,
+        split: toPerson,
+        note: "旅程階段性結清歸零"
+      };
+      
+      // 直接呼叫你原本就寫好的後端 addExpenseData 函數，完全不用重寫後端邏輯！
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res === "Success") {
+            handleRefresh(); // 重新載入，大牌歸零！
+          } else {
+            showToast("結清失敗", "error");
+          }
+        })
+        .addExpenseData(formData);
+    }
+  </script>
