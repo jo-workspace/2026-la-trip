@@ -15,6 +15,7 @@ interface SettingsModalProps {
   fxRate: number;
   budgetTwd: number;
   tripNote: string;
+  foreignCurrency: string;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -28,6 +29,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   fxRate,
   budgetTwd,
   tripNote,
+  foreignCurrency,
 }) => {
   const [title, setTitle] = useState('');
   const [dates, setDates] = useState('');
@@ -35,6 +37,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [rate, setRate] = useState('');
   const [budget, setBudget] = useState('');
   const [note, setNote] = useState('');
+  const [currency, setCurrency] = useState('USD');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -47,9 +50,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setRate(fxRate ? String(fxRate) : '');
       setBudget(budgetTwd ? String(budgetTwd) : '');
       setNote(tripNote || '');
+      setCurrency(foreignCurrency || 'USD');
       setError('');
     }
-  }, [isOpen, tripTitle, tripDates, startDate, fxRate, budgetTwd, tripNote]);
+  }, [isOpen, tripTitle, tripDates, startDate, fxRate, budgetTwd, tripNote, foreignCurrency]);
 
   if (!isOpen) return null;
 
@@ -65,6 +69,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         fxRate: rate ? parseFloat(rate) : 32.5,
         budgetTwd: budget ? parseInt(budget, 10) : 0,
         tripNote: note,
+        foreignCurrency: currency.trim().toUpperCase() || 'USD',
       });
       onSaved();
       onClose();
@@ -156,8 +161,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-600 mb-1">
+                    外幣代碼
+                    <span className="text-slate-400 font-normal ml-1">例：USD、JPY、EUR</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value.toUpperCase())}
+                    placeholder="USD"
+                    maxLength={5}
+                    className="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-mono tracking-widest"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">
                     匯率
-                    <span className="text-slate-400 font-normal ml-1">USD → TWD</span>
+                    <span className="text-slate-400 font-normal ml-1">{currency || 'USD'} → TWD</span>
                   </label>
                   <div className="relative">
                     <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
@@ -172,21 +192,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     />
                   </div>
                 </div>
+              </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1">
-                    預算
-                    <span className="text-slate-400 font-normal ml-1">TWD</span>
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={budget}
-                    onChange={(e) => setBudget(e.target.value)}
-                    placeholder="100000"
-                    className="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all"
-                  />
-                </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1">
+                  預算
+                  <span className="text-slate-400 font-normal ml-1">TWD</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={budget}
+                  onChange={(e) => setBudget(e.target.value)}
+                  placeholder="100000"
+                  className="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all"
+                />
               </div>
             </div>
 

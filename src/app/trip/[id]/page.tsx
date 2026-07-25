@@ -84,6 +84,7 @@ export default function TripPage({ params }: PageProps) {
     tripNote: '',
     startDate: '',
     budgetTwd: 0,
+    foreignCurrency: 'USD',
     tripTitle: '',
     tripDates: '',
   });
@@ -482,6 +483,7 @@ export default function TripPage({ params }: PageProps) {
         fxRate={tripData.fxRate}
         budgetTwd={tripData.budgetTwd || 0}
         tripNote={tripData.tripNote}
+        foreignCurrency={tripData.foreignCurrency || 'USD'}
       />
 
       <LightboxModal imageUrl={lightboxUrl} onClose={() => setLightboxUrl(null)} />

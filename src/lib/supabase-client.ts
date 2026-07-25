@@ -106,8 +106,15 @@ export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promi
       supabase.from('packing_items').select('*').eq('trip_id', tripId).order('created_at', { ascending: true }),
       supabase.from('expense_items').select('*').eq('trip_id', tripId).order('created_at', { ascending: true }),
       supabase.from('shopping_items').select('*').eq('trip_id', tripId).order('created_at', { ascending: true }),
-      supabase.from('trip_settings').select('*').eq('trip_id', tripId).maybeSingle(),
-      supabase.from('trips').select('title, dates').eq('id', tripId).maybeSingle(),
+      // 明確列出欄位名，避免 Supabase schema cache 未刷新導致新欄位漏讀
+      supabase.from('trip_settings')
+        .select('trip_id, budget_twd, fx_rate, start_date, trip_note, foreign_currency')
+        .eq('trip_id', tripId)
+        .limit(1),
+      supabase.from('trips')
+        .select('title, dates')
+        .eq('id', tripId)
+        .limit(1),
     ]);
 
     const itinerary: ItineraryItem[] = (itineraryRes.data || []).map((row, idx) => ({
@@ -167,12 +174,17 @@ export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promi
       isDone: !!(row.Done ?? row.Is_Done ?? row.is_done ?? row.bought ?? false),
     }));
 
-    const fxRate = settingsRes.data?.fx_rate ? Number(settingsRes.data.fx_rate) : 32.5;
-    const startDate = settingsRes.data?.start_date || '';
-    const budgetTwd = settingsRes.data?.budget_twd ? Number(settingsRes.data.budget_twd) : 0;
-    const tripNote = settingsRes.data?.trip_note || '';
-    const tripTitle = tripRes.data?.title || tripId;
-    const tripDates = tripRes.data?.dates || '';
+    // settingsRes / tripRes 現在回傳 array（.limit(1)），取第一筆
+    const settingsData = settingsRes.data?.[0] ?? null;
+    const tripData = tripRes.data?.[0] ?? null;
+
+    const fxRate = settingsData?.fx_rate ? Number(settingsData.fx_rate) : 32.5;
+    const startDate = settingsData?.start_date || '';
+    const budgetTwd = settingsData?.budget_twd ? Number(settingsData.budget_twd) : 0;
+    const tripNote = settingsData?.trip_note || '';
+    const foreignCurrency = settingsData?.foreign_currency || 'USD';
+    const tripTitle = tripData?.title || tripId;
+    const tripDates = tripData?.dates || '';
 
     return {
       itinerary,
@@ -184,6 +196,7 @@ export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promi
       tripNote,
       startDate,
       budgetTwd,
+      foreignCurrency,
       tripTitle,
       tripDates,
     };
@@ -199,6 +212,7 @@ export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promi
       tripNote: '',
       startDate: '',
       budgetTwd: 0,
+      foreignCurrency: 'USD',
       tripTitle: '',
       tripDates: '',
     };
@@ -213,6 +227,7 @@ export async function updateTripSettings(
     fxRate?: number;
     budgetTwd?: number;
     tripNote?: string;
+    foreignCurrency?: string;
     title?: string;
     dates?: string;
   }
@@ -223,6 +238,7 @@ export async function updateTripSettings(
     fx_rate: settings.fxRate ?? 32.5,
     budget_twd: settings.budgetTwd ?? 0,
     trip_note: settings.tripNote ?? '',
+    foreign_currency: settings.foreignCurrency ?? 'USD',
   };
 
   const { data: existing } = await supabase
