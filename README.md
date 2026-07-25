@@ -1,4 +1,6 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# jo-travel-hub
+
+這是一個基於 [Next.js](https://nextjs.org) 構建的多旅程行程規劃與隨身助理 Portal (包含 LA 2026、沖繩 2026 等旅程)。
 
 ## Getting Started
 

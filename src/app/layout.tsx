@@ -13,8 +13,8 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "LA Trip 2026",
-  description: "2026 洛杉磯旅遊行程與隨身助理",
+  title: "Jo Travel Hub - 隨身旅遊助理",
+  description: "多旅程行程規劃與隨身助理 Portal",
   icons: {
     icon: [
       { url: "/favicon.png", type: "image/png" },
