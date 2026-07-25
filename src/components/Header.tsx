@@ -9,6 +9,7 @@ interface HeaderProps {
   onRefresh: () => void;
   onOpenSettings: () => void;
   isLoading?: boolean;
+  tripTitle?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -17,18 +18,20 @@ export const Header: React.FC<HeaderProps> = ({
   onRefresh,
   onOpenSettings,
   isLoading = false,
+  tripTitle = '2026 LA Trip',
 }) => {
+  const badgeText = tripTitle.split(' ').pop()?.toUpperCase().substring(0, 3) || 'TRIP';
   return (
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-4 py-3 md:px-8">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Title */}
         <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black text-sm shadow-sm select-none">
-            LA
+          <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black text-xs shadow-sm select-none">
+            {badgeText}
           </div>
           <div>
             <h1 className="text-base md:text-lg font-black text-slate-900 tracking-tight leading-none">
-              2026 LA Trip
+              {tripTitle}
             </h1>
           </div>
         </div>

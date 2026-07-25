@@ -121,15 +121,7 @@ export default function TripPage({ params }: PageProps) {
     try {
       const res = await getAllData(bypassCache, tripId);
       if (res) {
-        setTripData({
-          itinerary: res.itinerary || [],
-          todo: res.todo || [],
-          packing: res.packing || [],
-          expenses: res.expenses || [],
-          shopping: res.shopping || [],
-          fxRate: res.fxRate || 0.21,
-          tripNote: res.tripNote || '',
-        });
+        setTripData(res);
       }
     } catch (err: any) {
       showToast(`資料載入失敗: ${err.message || err}`);
@@ -348,6 +340,7 @@ export default function TripPage({ params }: PageProps) {
           onRefresh={() => fetchData(true)}
           onOpenSettings={() => setSettingsModalOpen(true)}
           isLoading={isLoading}
+          tripTitle={tripData.tripTitle || tripConfig.title}
         />
 
         {/* Top Back Link & Trip Title Bar */}
@@ -359,7 +352,7 @@ export default function TripPage({ params }: PageProps) {
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>返回旅程大廳</span>
           </Link>
-          <span className="font-extrabold text-slate-700">{tripConfig.title}</span>
+          <span className="font-extrabold text-slate-700">{tripData.tripTitle || tripConfig.title}</span>
         </div>
 
         {/* Content Area */}

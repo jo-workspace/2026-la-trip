@@ -106,13 +106,13 @@ export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promi
       supabase.from('packing_items').select('*').eq('trip_id', tripId).order('created_at', { ascending: true }),
       supabase.from('expense_items').select('*').eq('trip_id', tripId).order('created_at', { ascending: true }),
       supabase.from('shopping_items').select('*').eq('trip_id', tripId).order('created_at', { ascending: true }),
-      // 明確列出欄位名，避免 Supabase schema cache 未刷新導致新欄位漏讀
+      // 使用 select('*') 容錯讀取所有存在欄位
       supabase.from('trip_settings')
-        .select('trip_id, budget_twd, fx_rate, start_date, trip_note, foreign_currency')
+        .select('*')
         .eq('trip_id', tripId)
         .limit(1),
       supabase.from('trips')
-        .select('title, dates')
+        .select('*')
         .eq('id', tripId)
         .limit(1),
     ]);
@@ -183,8 +183,8 @@ export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promi
     const budgetTwd = settingsData?.budget_twd ? Number(settingsData.budget_twd) : 0;
     const tripNote = settingsData?.trip_note || '';
     const foreignCurrency = settingsData?.foreign_currency || 'USD';
-    const tripTitle = tripData?.title || tripId;
-    const tripDates = tripData?.dates || '';
+    const tripTitle = settingsData?.title || tripData?.title || tripId;
+    const tripDates = settingsData?.dates || tripData?.dates || '';
 
     return {
       itinerary,
@@ -232,12 +232,17 @@ export async function updateTripSettings(
     dates?: string;
   }
 ): Promise<void> {
-  // trip_settings: 先嘗試 UPDATE，若無資料則 INSERT
-  const settingsPayload = {
+  // 基礎 payload
+  const basePayload: Record<string, any> = {
     start_date: settings.startDate ?? '',
     fx_rate: settings.fxRate ?? 32.5,
     budget_twd: settings.budgetTwd ?? 0,
     trip_note: settings.tripNote ?? '',
+  };
+
+  // 完整 payload
+  const fullPayload: Record<string, any> = {
+    ...basePayload,
     foreign_currency: settings.foreignCurrency ?? 'USD',
   };
 
@@ -245,31 +250,50 @@ export async function updateTripSettings(
     .from('trip_settings')
     .select('trip_id')
     .eq('trip_id', tripId)
-    .maybeSingle();
+    .limit(1);
 
   let settingsError;
-  if (existing) {
+  if (existing && existing.length > 0) {
     const { error } = await supabase
       .from('trip_settings')
-      .update(settingsPayload)
+      .update(fullPayload)
       .eq('trip_id', tripId);
     settingsError = error;
+
+    if (settingsError) {
+      const { error: retryError } = await supabase
+        .from('trip_settings')
+        .update(basePayload)
+        .eq('trip_id', tripId);
+      settingsError = retryError;
+    }
   } else {
     const { error } = await supabase
       .from('trip_settings')
-      .insert({ trip_id: tripId, categories: '[]', ...settingsPayload });
+      .insert({ trip_id: tripId, categories: '[]', ...fullPayload });
     settingsError = error;
+
+    if (settingsError) {
+      const { error: retryError } = await supabase
+        .from('trip_settings')
+        .insert({ trip_id: tripId, categories: '[]', ...basePayload });
+      settingsError = retryError;
+    }
   }
 
   if (settingsError) throw new Error(`設定儲存失敗: ${settingsError.message}`);
 
-  // trips: 更新旅程名稱與日期顯示
-  const { error: tripsError } = await supabase
-    .from('trips')
-    .update({ title: settings.title, dates: settings.dates })
-    .eq('id', tripId);
-
-  if (tripsError) throw new Error(`旅程資訊儲存失敗: ${tripsError.message}`);
+  // 同步更新 trips 資料表（旅程卡片名稱與日期）
+  if (settings.title !== undefined || settings.dates !== undefined) {
+    try {
+      await supabase
+        .from('trips')
+        .update({ title: settings.title, dates: settings.dates })
+        .eq('id', tripId);
+    } catch (e) {
+      console.warn('trips table update skipped or failed:', e);
+    }
+  }
 }
 
 /** 行程新增/儲存 */
