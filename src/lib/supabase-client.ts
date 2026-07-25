@@ -101,7 +101,7 @@ export async function deleteTrip(tripId: string): Promise<void> {
 export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promise<AllTripData> {
   try {
     const [itineraryRes, todoRes, packingRes, expenseRes, shoppingRes, settingsRes] = await Promise.all([
-      supabase.from('itinerary_items').select('*').eq('trip_id', tripId).order('day_number', { ascending: true }),
+      supabase.from('itinerary_items').select('*').eq('trip_id', tripId).order('created_at', { ascending: true }),
       supabase.from('todo_items').select('*').eq('trip_id', tripId).order('created_at', { ascending: true }),
       supabase.from('packing_items').select('*').eq('trip_id', tripId).order('created_at', { ascending: true }),
       supabase.from('expense_items').select('*').eq('trip_id', tripId).order('created_at', { ascending: true }),
