@@ -72,6 +72,7 @@ export default function TripPage({ params }: PageProps) {
     shopping: [],
     fxRate: 32.5,
     tripNote: '',
+    startDate: '',
   });
 
   // Modal states
@@ -361,6 +362,7 @@ export default function TripPage({ params }: PageProps) {
                   data={tripData.itinerary}
                   tripNote={tripData.tripNote}
                   hideVisited={hideVisited}
+                  startDate={tripData.startDate}
                   onToggleVisited={handleToggleVisited}
                   onOpenModal={(item) => {
                     setActiveItineraryItem(item || null);

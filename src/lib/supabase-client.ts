@@ -141,26 +141,33 @@ export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promi
     const expenses: ExpenseItem[] = (expenseRes.data || []).map((row, idx) => ({
       rowIndex: idx + 2,
       category: row.Category || row.category || '餐飲',
-      item: row.Item || row.item || row.item_name || '',
-      amount: Number(row.Amount || row.amount_jpy || row.amount_twd || row.amount || 0),
-      currency: row.Currency || (row.amount_jpy ? 'JPY' : 'TWD'),
-      paidBy: row.Paid_By || row.paidBy || row.payer || 'Jo',
-      split: row.Split || 'Both',
-      note: row.Note || row.notes || '',
-      date: row.Date || (row.created_at ? new Date(row.created_at).toISOString().split('T')[0] : ''),
+      // 花費名稱：原始欄位叫 "Title"，也支援 Item/item_name
+      item: row.Title || row.title || row.Item || row.item || row.item_name || '',
+      amount: Number(row.Amount || row.amount || row.amount_jpy || row.amount_twd || 0),
+      currency: row.Currency || row.currency || (row.amount_jpy ? 'JPY' : 'TWD'),
+      // 付款人：原始欄位叫 "Paid By"（有空格），也支援 Paid_By/payer
+      paidBy: row['Paid By'] || row.Paid_By || row.paidBy || row.payer || 'Jo',
+      split: row.Split || row.split || 'Both',
+      note: row.Note || row.note || row.notes || '',
+      date: row.Date || row.date || (row.created_at ? new Date(row.created_at).toISOString().split('T')[0] : ''),
     }));
 
     const shopping: ShoppingItem[] = (shoppingRes.data || []).map((row, idx) => ({
       rowIndex: idx + 2,
       store: row.Store || row.store || '一般店家',
-      forWhom: row.For_Whom || row.forWhom || '自己',
+      // 為誰買：原始欄位叫 "For Whom"（有空格），也支援 For_Whom
+      forWhom: row['For Whom'] || row.For_Whom || row.forWhom || row.for_whom || '自己',
       item: row.Item || row.item || row.item_name || '',
       quantity: row.Quantity || row.quantity || '1',
+      image: row.Image || row.image || '',
+      url: row.URL || row.url || row.link || '',
       note: row.Note || row.note || '',
-      isDone: !!(row.Is_Done ?? row.bought ?? false),
+      // 完成狀態：原始欄位叫 "Done"，也支援 Is_Done/bought
+      isDone: !!(row.Done ?? row.Is_Done ?? row.is_done ?? row.bought ?? false),
     }));
 
     const fxRate = settingsRes.data?.fx_rate ? Number(settingsRes.data.fx_rate) : 0.21;
+    const startDate = settingsRes.data?.start_date || '';
 
     return {
       itinerary,
@@ -170,6 +177,7 @@ export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promi
       shopping,
       fxRate,
       tripNote: '',
+      startDate,
     };
   } catch (err) {
     console.error('getAllData Supabase error:', err);
@@ -181,6 +189,7 @@ export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promi
       shopping: [],
       fxRate: 0.21,
       tripNote: '',
+      startDate: '',
     };
   }
 }

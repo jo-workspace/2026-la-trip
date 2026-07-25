@@ -59,4 +59,5 @@ export interface AllTripData {
   shopping: ShoppingItem[];
   fxRate: number;
   tripNote: string;
+  startDate?: string; // YYYY-MM-DD，旅程起始日，用於自動計算每天日期
 }

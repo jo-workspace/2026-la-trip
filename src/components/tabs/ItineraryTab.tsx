@@ -8,6 +8,7 @@ interface ItineraryTabProps {
   data: ItineraryItem[];
   tripNote?: string;
   hideVisited: boolean;
+  startDate?: string; // YYYY-MM-DD，旅程起始日
   onToggleVisited: (rowIndex: number, currentStatus: boolean) => void;
   onOpenModal: (item?: ItineraryItem) => void;
   onOpenLightbox: (imageUrl: string) => void;
@@ -25,10 +26,24 @@ const ICON_MAPPING: Record<string, string> = {
   '其他': '📌',
 };
 
+// 由 startDate (YYYY-MM-DD) + Day N 計算出日期字串，例如 "8/28 Thu"
+function calcDateFromStartDate(startDateStr: string, dayLabel: string): string {
+  if (!startDateStr) return '';
+  const dayNum = parseInt(dayLabel.replace(/[^0-9]/g, ''), 10);
+  if (isNaN(dayNum)) return '';
+  const start = new Date(startDateStr);
+  if (isNaN(start.getTime())) return '';
+  const target = new Date(start);
+  target.setDate(target.getDate() + dayNum - 1);
+  const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  return `${target.getMonth() + 1}/${target.getDate()} ${weekdays[target.getDay()]}`;
+}
+
 export const ItineraryTab: React.FC<ItineraryTabProps> = ({
   data,
   tripNote,
   hideVisited,
+  startDate,
   onToggleVisited,
   onOpenModal,
 }) => {
@@ -122,7 +137,10 @@ export const ItineraryTab: React.FC<ItineraryTabProps> = ({
 
       {/* Itinerary Cards Grouped by Day */}
       {Object.entries(groupedByDay).map(([day, items]) => {
-        const dateText = items[0]?.date || '';
+        // 優先使用計算出來的日期，其次用資料本身的 date 欄位
+        const dateText = startDate
+          ? calcDateFromStartDate(startDate, day)
+          : (items[0]?.date || '');
         return (
           <div key={day} className="space-y-3">
             {/* Day Section Header */}
