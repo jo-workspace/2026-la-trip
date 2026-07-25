@@ -73,6 +73,9 @@ export default function TripPage({ params }: PageProps) {
     fxRate: 32.5,
     tripNote: '',
     startDate: '',
+    budgetTwd: 0,
+    tripTitle: '',
+    tripDates: '',
   });
 
   // Modal states
@@ -462,6 +465,13 @@ export default function TripPage({ params }: PageProps) {
         isOpen={settingsModalOpen}
         onClose={() => setSettingsModalOpen(false)}
         onSaved={() => fetchData(true)}
+        tripId={tripId}
+        tripTitle={tripData.tripTitle || tripConfig.title}
+        tripDates={tripData.tripDates || tripConfig.dates || ''}
+        startDate={tripData.startDate || ''}
+        fxRate={tripData.fxRate}
+        budgetTwd={tripData.budgetTwd || 0}
+        tripNote={tripData.tripNote}
       />
 
       <LightboxModal imageUrl={lightboxUrl} onClose={() => setLightboxUrl(null)} />

@@ -59,5 +59,8 @@ export interface AllTripData {
   shopping: ShoppingItem[];
   fxRate: number;
   tripNote: string;
-  startDate?: string; // YYYY-MM-DD，旅程起始日，用於自動計算每天日期
+  startDate?: string;   // YYYY-MM-DD，旅程起始日，用於自動計算每天日期
+  budgetTwd?: number;   // 總預算（台幣）
+  tripTitle?: string;   // 旅程名稱（from trips table）
+  tripDates?: string;   // 旅程日期顯示（from trips table）
 }

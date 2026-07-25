@@ -1,37 +1,78 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Key, Link as LinkIcon } from 'lucide-react';
-import { getApiToken, getScriptUrl, setApiToken, setScriptUrl } from '@/lib/gas-client';
+import { X, Settings2, Calendar, DollarSign, FileText, Globe } from 'lucide-react';
+import { updateTripSettings } from '@/lib/supabase-client';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaved: () => void;
+  tripId: string;
+  tripTitle: string;
+  tripDates: string;
+  startDate: string;
+  fxRate: number;
+  budgetTwd: number;
+  tripNote: string;
 }
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onSaved }) => {
-  const [token, setToken] = useState('');
-  const [url, setUrl] = useState('');
-  const [showUrlField, setShowUrlField] = useState(false);
+export const SettingsModal: React.FC<SettingsModalProps> = ({
+  isOpen,
+  onClose,
+  onSaved,
+  tripId,
+  tripTitle,
+  tripDates,
+  startDate,
+  fxRate,
+  budgetTwd,
+  tripNote,
+}) => {
+  const [title, setTitle] = useState('');
+  const [dates, setDates] = useState('');
+  const [start, setStart] = useState('');
+  const [rate, setRate] = useState('');
+  const [budget, setBudget] = useState('');
+  const [note, setNote] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState('');
 
+  // 每次開啟時重新載入目前值
   useEffect(() => {
     if (isOpen) {
-      setToken(getApiToken());
-      setUrl(getScriptUrl());
+      setTitle(tripTitle || '');
+      setDates(tripDates || '');
+      setStart(startDate || '');
+      setRate(fxRate ? String(fxRate) : '');
+      setBudget(budgetTwd ? String(budgetTwd) : '');
+      setNote(tripNote || '');
+      setError('');
     }
-  }, [isOpen]);
+  }, [isOpen, tripTitle, tripDates, startDate, fxRate, budgetTwd, tripNote]);
 
   if (!isOpen) return null;
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setApiToken(token.trim());
-    if (showUrlField && url.trim()) {
-      setScriptUrl(url.trim());
+    setIsSaving(true);
+    setError('');
+    try {
+      await updateTripSettings(tripId, {
+        title: title.trim(),
+        dates: dates.trim(),
+        startDate: start.trim(),
+        fxRate: rate ? parseFloat(rate) : 32.5,
+        budgetTwd: budget ? parseInt(budget, 10) : 0,
+        tripNote: note,
+      });
+      onSaved();
+      onClose();
+    } catch (err: any) {
+      setError(err?.message || '儲存失敗，請再試一次');
+    } finally {
+      setIsSaving(false);
     }
-    onSaved();
-    onClose();
   };
 
   return (
@@ -40,13 +81,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
       onClick={onClose}
     >
       <div
-        className="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-4 animate-scale-up border border-slate-100"
+        className="bg-white w-full max-w-md rounded-3xl shadow-2xl border border-slate-100 overflow-hidden animate-scale-up"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-slate-100">
           <h3 className="text-lg font-extrabold text-slate-900 flex items-center space-x-2">
-            <Key className="w-5 h-5 text-slate-700" />
-            <span>API 連線與認證設定</span>
+            <Settings2 className="w-5 h-5 text-slate-700" />
+            <span>旅程設定</span>
           </h3>
           <button
             onClick={onClose}
@@ -56,48 +98,129 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
           </button>
         </div>
 
-        <form onSubmit={handleSave} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-500 mb-1">
-              認證金鑰 (API Token / 暗號)
-            </label>
-            <input
-              type="text"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              placeholder="無設定金鑰請留空"
-              className="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-mono"
-            />
-            <p className="text-[11px] text-slate-400 mt-1">
-              若您的 Google Apps Script 後端有開啟 Token 認證，請在此輸入暗號。
-            </p>
+        <form onSubmit={handleSave} className="overflow-y-auto max-h-[70vh]">
+          <div className="px-6 py-4 space-y-5">
+
+            {/* 基本資訊 */}
+            <div className="space-y-3">
+              <div className="flex items-center space-x-1.5 text-xs font-extrabold text-slate-400 uppercase tracking-wider">
+                <Globe className="w-3.5 h-3.5" />
+                <span>基本資訊</span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1">旅程名稱</label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="例：2026 LA Trip"
+                  className="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1">旅程日期顯示</label>
+                <input
+                  type="text"
+                  value={dates}
+                  onChange={(e) => setDates(e.target.value)}
+                  placeholder="例：2026/08"
+                  className="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all"
+                />
+              </div>
+            </div>
+
+            <div className="border-t border-slate-100" />
+
+            {/* 日期與財務 */}
+            <div className="space-y-3">
+              <div className="flex items-center space-x-1.5 text-xs font-extrabold text-slate-400 uppercase tracking-wider">
+                <Calendar className="w-3.5 h-3.5" />
+                <span>日期與財務</span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1">
+                  旅程起始日期
+                  <span className="text-slate-400 font-normal ml-1">（Day 1 對應的日期）</span>
+                </label>
+                <input
+                  type="date"
+                  value={start}
+                  onChange={(e) => setStart(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">
+                    匯率
+                    <span className="text-slate-400 font-normal ml-1">USD → TWD</span>
+                  </label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={rate}
+                      onChange={(e) => setRate(e.target.value)}
+                      placeholder="32.5"
+                      className="w-full bg-slate-50 border border-slate-200 text-sm pl-8 pr-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">
+                    預算
+                    <span className="text-slate-400 font-normal ml-1">TWD</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={budget}
+                    onChange={(e) => setBudget(e.target.value)}
+                    placeholder="100000"
+                    className="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-100" />
+
+            {/* 行程重要備註 */}
+            <div className="space-y-3">
+              <div className="flex items-center space-x-1.5 text-xs font-extrabold text-slate-400 uppercase tracking-wider">
+                <FileText className="w-3.5 h-3.5" />
+                <span>行程重要備註</span>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1">
+                  備註內容
+                  <span className="text-slate-400 font-normal ml-1">（顯示在行程表最上方的公告欄）</span>
+                </label>
+                <textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder={"例：\n8/30 李政厚搖頭娃娃 (1:05 PM)\n班機時間：\n---8/30 TPE 00:05"}
+                  rows={6}
+                  className="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all resize-none leading-relaxed"
+                />
+              </div>
+            </div>
+
+            {/* Error */}
+            {error && (
+              <p className="text-xs font-bold text-red-500 bg-red-50 px-3 py-2 rounded-xl">{error}</p>
+            )}
           </div>
 
-          {showUrlField ? (
-            <div>
-              <label className="block text-xs font-bold text-slate-500 mb-1">
-                Apps Script Web App API 網址
-              </label>
-              <input
-                type="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://script.google.com/macros/s/.../exec"
-                className="w-full bg-slate-50 border border-slate-200 text-xs px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-mono"
-              />
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setShowUrlField(true)}
-              className="text-xs font-bold text-slate-400 hover:text-slate-700 underline flex items-center space-x-1 cursor-pointer"
-            >
-              <LinkIcon className="w-3.5 h-3.5" />
-              <span>進階：自訂 Web App API 網址</span>
-            </button>
-          )}
-
-          <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+          {/* Footer */}
+          <div className="flex items-center justify-end space-x-2 px-6 py-4 border-t border-slate-100 bg-slate-50/60">
             <button
               type="button"
               onClick={onClose}
@@ -107,9 +230,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
             </button>
             <button
               type="submit"
-              className="px-5 py-2 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white rounded-xl transition-all cursor-pointer"
+              disabled={isSaving}
+              className="px-5 py-2 text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white rounded-xl transition-all cursor-pointer disabled:opacity-50"
             >
-              儲存變更
+              {isSaving ? '儲存中…' : '儲存設定'}
             </button>
           </div>
         </form>

@@ -100,13 +100,14 @@ export async function deleteTrip(tripId: string): Promise<void> {
 /** 獲取單一旅程的所有資料 (行程, 待辦, 行李, 花費, 購物, 設定) */
 export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promise<AllTripData> {
   try {
-    const [itineraryRes, todoRes, packingRes, expenseRes, shoppingRes, settingsRes] = await Promise.all([
+    const [itineraryRes, todoRes, packingRes, expenseRes, shoppingRes, settingsRes, tripRes] = await Promise.all([
       supabase.from('itinerary_items').select('*').eq('trip_id', tripId).order('created_at', { ascending: true }),
       supabase.from('todo_items').select('*').eq('trip_id', tripId).order('created_at', { ascending: true }),
       supabase.from('packing_items').select('*').eq('trip_id', tripId).order('created_at', { ascending: true }),
       supabase.from('expense_items').select('*').eq('trip_id', tripId).order('created_at', { ascending: true }),
       supabase.from('shopping_items').select('*').eq('trip_id', tripId).order('created_at', { ascending: true }),
       supabase.from('trip_settings').select('*').eq('trip_id', tripId).single(),
+      supabase.from('trips').select('title, dates').eq('id', tripId).single(),
     ]);
 
     const itinerary: ItineraryItem[] = (itineraryRes.data || []).map((row, idx) => ({
@@ -166,8 +167,12 @@ export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promi
       isDone: !!(row.Done ?? row.Is_Done ?? row.is_done ?? row.bought ?? false),
     }));
 
-    const fxRate = settingsRes.data?.fx_rate ? Number(settingsRes.data.fx_rate) : 0.21;
+    const fxRate = settingsRes.data?.fx_rate ? Number(settingsRes.data.fx_rate) : 32.5;
     const startDate = settingsRes.data?.start_date || '';
+    const budgetTwd = settingsRes.data?.budget_twd ? Number(settingsRes.data.budget_twd) : 0;
+    const tripNote = settingsRes.data?.trip_note || '';
+    const tripTitle = tripRes.data?.title || tripId;
+    const tripDates = tripRes.data?.dates || '';
 
     return {
       itinerary,
@@ -176,8 +181,11 @@ export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promi
       expenses,
       shopping,
       fxRate,
-      tripNote: '',
+      tripNote,
       startDate,
+      budgetTwd,
+      tripTitle,
+      tripDates,
     };
   } catch (err) {
     console.error('getAllData Supabase error:', err);
@@ -187,11 +195,46 @@ export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promi
       packing: [],
       expenses: [],
       shopping: [],
-      fxRate: 0.21,
+      fxRate: 32.5,
       tripNote: '',
       startDate: '',
+      budgetTwd: 0,
+      tripTitle: '',
+      tripDates: '',
     };
   }
+}
+
+/** 儲存所有旅程設定（設定彈窗用） */
+export async function updateTripSettings(
+  tripId: string,
+  settings: {
+    startDate?: string;
+    fxRate?: number;
+    budgetTwd?: number;
+    tripNote?: string;
+    title?: string;
+    dates?: string;
+  }
+): Promise<void> {
+  const [settingsResult, tripsResult] = await Promise.all([
+    supabase.from('trip_settings').upsert(
+      {
+        trip_id: tripId,
+        start_date: settings.startDate ?? '',
+        fx_rate: settings.fxRate ?? 32.5,
+        budget_twd: settings.budgetTwd ?? 0,
+        trip_note: settings.tripNote ?? '',
+      },
+      { onConflict: 'trip_id' }
+    ),
+    supabase.from('trips').update({
+      title: settings.title,
+      dates: settings.dates,
+    }).eq('id', tripId),
+  ]);
+  if (settingsResult.error) throw new Error(`設定儲存失敗: ${settingsResult.error.message}`);
+  if (tripsResult.error) throw new Error(`旅程資訊儲存失敗: ${tripsResult.error.message}`);
 }
 
 /** 行程新增/儲存 */
