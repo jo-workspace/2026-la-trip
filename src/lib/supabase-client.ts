@@ -112,7 +112,7 @@ export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promi
     const itinerary: ItineraryItem[] = (itineraryRes.data || []).map((row, idx) => ({
       rowIndex: idx + 2, // 保持相容性 1-indexed
       day: row.Day || row.day || `Day ${row.day_number || 1}`,
-      date: row.date_str || '',
+      date: row.Date || row.date || row.date_str || '',
       time: row.Time || row.time || '',
       type: row.Type || row.type || row.category || '觀光',
       title: row.Title || row.title || '未命名行程',
