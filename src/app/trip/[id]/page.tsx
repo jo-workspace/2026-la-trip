@@ -59,7 +59,17 @@ export default function TripPage({ params }: PageProps) {
     description: '專屬隨身旅程',
   };
 
-  const [currentTab, setCurrentTab] = useState<TabType>('itinerary');
+  const [currentTab, setCurrentTab] = useState<TabType>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem(`activeTab_${tripId}`) as TabType) || 'itinerary';
+    }
+    return 'itinerary';
+  });
+
+  const handleTabChange = (tab: TabType) => {
+    setCurrentTab(tab);
+    localStorage.setItem(`activeTab_${tripId}`, tab);
+  };
   const [hideVisited, setHideVisited] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -323,7 +333,7 @@ export default function TripPage({ params }: PageProps) {
       {/* Desktop Sidebar Navigation */}
       <Sidebar
         currentTab={currentTab}
-        onSelectTab={setCurrentTab}
+        onSelectTab={handleTabChange}
         hideVisited={hideVisited}
         onToggleHideVisited={() => setHideVisited(!hideVisited)}
       />
@@ -426,7 +436,7 @@ export default function TripPage({ params }: PageProps) {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <MobileNav currentTab={currentTab} onSelectTab={setCurrentTab} />
+      <MobileNav currentTab={currentTab} onSelectTab={handleTabChange} />
 
       {/* Modals */}
       <ItineraryModal
