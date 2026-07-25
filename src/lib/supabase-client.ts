@@ -106,8 +106,8 @@ export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promi
       supabase.from('packing_items').select('*').eq('trip_id', tripId).order('created_at', { ascending: true }),
       supabase.from('expense_items').select('*').eq('trip_id', tripId).order('created_at', { ascending: true }),
       supabase.from('shopping_items').select('*').eq('trip_id', tripId).order('created_at', { ascending: true }),
-      supabase.from('trip_settings').select('*').eq('trip_id', tripId).single(),
-      supabase.from('trips').select('title, dates').eq('id', tripId).single(),
+      supabase.from('trip_settings').select('*').eq('trip_id', tripId).maybeSingle(),
+      supabase.from('trips').select('title, dates').eq('id', tripId).maybeSingle(),
     ]);
 
     const itinerary: ItineraryItem[] = (itineraryRes.data || []).map((row, idx) => ({
@@ -217,24 +217,43 @@ export async function updateTripSettings(
     dates?: string;
   }
 ): Promise<void> {
-  const [settingsResult, tripsResult] = await Promise.all([
-    supabase.from('trip_settings').upsert(
-      {
-        trip_id: tripId,
-        start_date: settings.startDate ?? '',
-        fx_rate: settings.fxRate ?? 32.5,
-        budget_twd: settings.budgetTwd ?? 0,
-        trip_note: settings.tripNote ?? '',
-      },
-      { onConflict: 'trip_id' }
-    ),
-    supabase.from('trips').update({
-      title: settings.title,
-      dates: settings.dates,
-    }).eq('id', tripId),
-  ]);
-  if (settingsResult.error) throw new Error(`設定儲存失敗: ${settingsResult.error.message}`);
-  if (tripsResult.error) throw new Error(`旅程資訊儲存失敗: ${tripsResult.error.message}`);
+  // trip_settings: 先嘗試 UPDATE，若無資料則 INSERT
+  const settingsPayload = {
+    start_date: settings.startDate ?? '',
+    fx_rate: settings.fxRate ?? 32.5,
+    budget_twd: settings.budgetTwd ?? 0,
+    trip_note: settings.tripNote ?? '',
+  };
+
+  const { data: existing } = await supabase
+    .from('trip_settings')
+    .select('trip_id')
+    .eq('trip_id', tripId)
+    .maybeSingle();
+
+  let settingsError;
+  if (existing) {
+    const { error } = await supabase
+      .from('trip_settings')
+      .update(settingsPayload)
+      .eq('trip_id', tripId);
+    settingsError = error;
+  } else {
+    const { error } = await supabase
+      .from('trip_settings')
+      .insert({ trip_id: tripId, categories: '[]', ...settingsPayload });
+    settingsError = error;
+  }
+
+  if (settingsError) throw new Error(`設定儲存失敗: ${settingsError.message}`);
+
+  // trips: 更新旅程名稱與日期顯示
+  const { error: tripsError } = await supabase
+    .from('trips')
+    .update({ title: settings.title, dates: settings.dates })
+    .eq('id', tripId);
+
+  if (tripsError) throw new Error(`旅程資訊儲存失敗: ${tripsError.message}`);
 }
 
 /** 行程新增/儲存 */
