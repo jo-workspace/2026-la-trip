@@ -111,53 +111,53 @@ export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promi
 
     const itinerary: ItineraryItem[] = (itineraryRes.data || []).map((row, idx) => ({
       rowIndex: idx + 2, // 保持相容性 1-indexed
-      day: `Day ${row.day_number || 1}`,
+      day: row.Day || row.day || `Day ${row.day_number || 1}`,
       date: row.date_str || '',
-      time: row.time || '',
-      type: row.category || '觀光',
-      title: row.title,
-      content: row.note || '',
-      links: row.location || '',
-      isVisited: false,
+      time: row.Time || row.time || '',
+      type: row.Type || row.type || row.category || '觀光',
+      title: row.Title || row.title || '未命名行程',
+      content: row.Content || row.content || row.note || '',
+      links: row.Links || row.links || row.location || '',
+      isVisited: !!(row.Is_Visited ?? row.is_visited ?? false),
     }));
 
     const todo: TodoItem[] = (todoRes.data || []).map((row, idx) => ({
       rowIndex: idx + 2,
-      category: '待辦',
-      task: row.task_name,
-      note: row.due_date ? `到期日: ${row.due_date}` : '',
-      isDone: !!row.completed,
+      category: row.Category || row.category || '待辦',
+      task: row.Task || row.task || row.task_name || '',
+      note: row.Note || row.note || (row.due_date ? `到期日: ${row.due_date}` : ''),
+      isDone: !!(row.Is_Done ?? row.completed ?? false),
     }));
 
     const packing: PackingItem[] = (packingRes.data || []).map((row, idx) => ({
       rowIndex: idx + 2,
-      category: row.category || '個人物品',
-      person: row.owner || '全員',
-      item: row.item_name,
-      note: '',
-      isPacked: !!row.packed,
+      category: row.Category || row.category || '個人物品',
+      person: row.Person || row.person || row.owner || '全員',
+      item: row.Item || row.item || row.item_name || '',
+      note: row.Note || row.note || '',
+      isPacked: !!(row.Is_Packed ?? row.packed ?? false),
     }));
 
     const expenses: ExpenseItem[] = (expenseRes.data || []).map((row, idx) => ({
       rowIndex: idx + 2,
-      category: row.category || '餐飲',
-      item: row.item_name,
-      amount: Number(row.amount_jpy || row.amount_twd || 0),
-      currency: row.amount_jpy ? 'JPY' : 'TWD',
-      paidBy: row.payer || 'Jo',
-      split: 'Both',
-      note: row.notes || '',
-      date: new Date(row.created_at).toISOString().split('T')[0],
+      category: row.Category || row.category || '餐飲',
+      item: row.Item || row.item || row.item_name || '',
+      amount: Number(row.Amount || row.amount_jpy || row.amount_twd || row.amount || 0),
+      currency: row.Currency || (row.amount_jpy ? 'JPY' : 'TWD'),
+      paidBy: row.Paid_By || row.paidBy || row.payer || 'Jo',
+      split: row.Split || 'Both',
+      note: row.Note || row.notes || '',
+      date: row.Date || (row.created_at ? new Date(row.created_at).toISOString().split('T')[0] : ''),
     }));
 
     const shopping: ShoppingItem[] = (shoppingRes.data || []).map((row, idx) => ({
       rowIndex: idx + 2,
-      store: row.store || '一般店家',
-      forWhom: '自己',
-      item: row.item_name,
-      quantity: '1',
-      note: row.note || '',
-      isDone: !!row.bought,
+      store: row.Store || row.store || '一般店家',
+      forWhom: row.For_Whom || row.forWhom || '自己',
+      item: row.Item || row.item || row.item_name || '',
+      quantity: row.Quantity || row.quantity || '1',
+      note: row.Note || row.note || '',
+      isDone: !!(row.Is_Done ?? row.bought ?? false),
     }));
 
     const fxRate = settingsRes.data?.fx_rate ? Number(settingsRes.data.fx_rate) : 0.21;
