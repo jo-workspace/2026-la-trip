@@ -199,6 +199,8 @@ export async function saveItineraryData(formData: any, tripId = 'la-2026'): Prom
     title: title || '未命名行程',
     note: content || '',
     location: links || '',
+    links: links || '',
+    url: links || '',
   });
 
   if (error) throw new Error(`儲存行程失敗: ${error.message}`);
