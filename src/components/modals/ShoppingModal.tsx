@@ -87,8 +87,14 @@ export const ShoppingModal: React.FC<ShoppingModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl space-y-4 animate-scale-up border border-slate-100">
+    <div
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl space-y-4 animate-scale-up border border-slate-100"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <h3 className="text-lg font-extrabold text-slate-900">
             {item ? '編輯購物項目' : '新增購物項目'}

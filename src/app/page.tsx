@@ -149,8 +149,14 @@ export default function HomePage() {
 
       {/* Add Trip Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-slate-800 w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-700 space-y-4 animate-scale-up">
+        <div
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4"
+          onClick={() => setIsModalOpen(false)}
+        >
+          <div
+            className="bg-slate-800 w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-700 space-y-4 animate-scale-up"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between border-b border-slate-700/60 pb-3">
               <h3 className="text-base font-extrabold text-white flex items-center space-x-2">
                 <Sparkles className="w-4 h-4 text-amber-400" />
