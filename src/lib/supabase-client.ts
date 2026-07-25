@@ -141,16 +141,16 @@ export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promi
 
     const expenses: ExpenseItem[] = (expenseRes.data || []).map((row, idx) => ({
       rowIndex: idx + 2,
-      category: row.Category || row.category || '餐飲',
-      // 花費名稱：原始欄位叫 "Title"，也支援 Item/item_name
-      item: row.Title || row.title || row.Item || row.item || row.item_name || '',
-      amount: Number(row.Amount || row.amount || row.amount_jpy || row.amount_twd || 0),
-      currency: row.Currency || row.currency || (row.amount_jpy ? 'JPY' : 'TWD'),
-      // 付款人：原始欄位叫 "Paid By"（有空格），也支援 Paid_By/payer
-      paidBy: row['Paid By'] || row.Paid_By || row.paidBy || row.payer || 'Jo',
-      split: row.Split || row.split || 'Both',
-      note: row.Note || row.note || row.notes || '',
-      date: row.Date || row.date || (row.created_at ? new Date(row.created_at).toISOString().split('T')[0] : ''),
+      category: row.category || row.Category || '餐飲',
+      // DB 欄位：title（CSV 上傳後直接對應）
+      item: row.title || row.Title || row.item || row.Item || row.item_name || '',
+      amount: Number(row.amount || row.Amount || 0),
+      currency: row.currency || row.Currency || 'USD',
+      // DB 欄位：paid_by（CSV 上傳後直接對應）
+      paidBy: row.paid_by || row['Paid By'] || row.Paid_By || row.payer || 'Jo',
+      split: row.split || row.Split || 'Both',
+      note: row.note || row.Note || row.notes || '',
+      date: row.date || row.Date || (row.created_at ? new Date(row.created_at).toISOString().split('T')[0] : ''),
     }));
 
     const shopping: ShoppingItem[] = (shoppingRes.data || []).map((row, idx) => ({
@@ -333,16 +333,17 @@ export async function togglePackingStatus(rowIndex: number, isChecked: boolean, 
 
 /** 記帳 */
 export async function addExpenseData(formData: any, tripId = 'la-2026'): Promise<string> {
-  const { item, category, amount, currency, paidBy } = formData;
-  const numAmount = Number(amount || 0);
+  const { item, category, amount, currency, paidBy, split, note } = formData;
 
   const { error } = await supabase.from('expense_items').insert({
     trip_id: tripId,
-    item_name: item || '消費',
+    title: item || '消費',
     category: category || '餐飲',
-    amount_jpy: currency === 'JPY' ? numAmount : 0,
-    amount_twd: currency === 'TWD' ? numAmount : (currency === 'USD' ? numAmount * 32 : 0),
-    payer: paidBy || 'Jo',
+    amount: Number(amount || 0),
+    currency: currency || 'USD',
+    paid_by: paidBy || 'Jo',
+    split: split || 'Both',
+    note: note || '',
   });
 
   if (error) throw new Error(`記帳失敗: ${error.message}`);
