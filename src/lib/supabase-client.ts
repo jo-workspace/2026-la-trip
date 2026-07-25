@@ -117,7 +117,7 @@ export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promi
       type: row.Type || row.type || row.category || '觀光',
       title: row.Title || row.title || '未命名行程',
       content: row.Content || row.content || row.note || '',
-      links: row.Links || row.links || row.location || '',
+      links: row.Links || row.links || row.location || row.url || row.URL || '',
       isVisited: !!(row.Is_Visited ?? row.is_visited ?? false),
     }));
 
