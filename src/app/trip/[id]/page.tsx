@@ -37,7 +37,7 @@ import {
   saveShoppingData,
   deleteShoppingData,
   toggleShoppingStatus,
-} from '@/lib/gas-client';
+} from '@/lib/supabase-client';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
@@ -48,7 +48,16 @@ interface PageProps {
 export default function TripPage({ params }: PageProps) {
   const resolvedParams = use(params);
   const tripId = resolvedParams.id;
-  const tripConfig: TripConfig | undefined = TRIPS[tripId];
+  const rawConfig: TripConfig | undefined = TRIPS[tripId];
+  const tripConfig: TripConfig = rawConfig || {
+    id: tripId,
+    title: tripId.replace('trip-', '旅程 '),
+    dates: '2026',
+    coverGradient: 'from-indigo-600 to-purple-800',
+    badgeText: '進行中',
+    apiUrl: 'supabase',
+    description: '專屬隨身旅程',
+  };
 
   const [currentTab, setCurrentTab] = useState<TabType>('itinerary');
   const [hideVisited, setHideVisited] = useState<boolean>(true);
@@ -91,17 +100,11 @@ export default function TripPage({ params }: PageProps) {
     }, 3000);
   };
 
-  const targetApiUrl = tripConfig?.apiUrl || '';
-
-  // Fetch data
+  // Fetch data from Supabase
   const fetchData = useCallback(async (bypassCache = false) => {
-    if (!targetApiUrl) {
-      setIsLoading(false);
-      return;
-    }
     setIsLoading(true);
     try {
-      const res = await getAllData(bypassCache, targetApiUrl);
+      const res = await getAllData(bypassCache, tripId);
       if (res) {
         setTripData({
           itinerary: res.itinerary || [],
@@ -109,7 +112,7 @@ export default function TripPage({ params }: PageProps) {
           packing: res.packing || [],
           expenses: res.expenses || [],
           shopping: res.shopping || [],
-          fxRate: res.fxRate || 32.5,
+          fxRate: res.fxRate || 0.21,
           tripNote: res.tripNote || '',
         });
       }
@@ -118,7 +121,7 @@ export default function TripPage({ params }: PageProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [targetApiUrl]);
+  }, [tripId]);
 
   useEffect(() => {
     fetchData(false);
@@ -139,7 +142,7 @@ export default function TripPage({ params }: PageProps) {
     }));
 
     try {
-      await toggleVisitedStatus(rowIndex, nextStatus, targetApiUrl);
+      await toggleVisitedStatus(rowIndex, nextStatus, tripId);
     } catch (err: any) {
       showToast(`更新失敗，正在還原: ${err.message}`);
       fetchData(false);
@@ -149,7 +152,7 @@ export default function TripPage({ params }: PageProps) {
   const handleSaveItinerary = async (formData: any) => {
     try {
       showToast('正在儲存行程...');
-      await saveItineraryData(formData, targetApiUrl);
+      await saveItineraryData(formData, tripId);
       showToast('行程儲存成功！');
       fetchData(true);
     } catch (err: any) {
@@ -160,7 +163,7 @@ export default function TripPage({ params }: PageProps) {
   const handleDeleteItinerary = async (rowIndex: number) => {
     try {
       showToast('正在刪除行程...');
-      await deleteItineraryData(rowIndex, targetApiUrl);
+      await deleteItineraryData(rowIndex, tripId);
       showToast('刪除成功！');
       fetchData(true);
     } catch (err: any) {
@@ -179,7 +182,7 @@ export default function TripPage({ params }: PageProps) {
     }));
 
     try {
-      await toggleTodoStatus(rowIndex, nextStatus, targetApiUrl);
+      await toggleTodoStatus(rowIndex, nextStatus, tripId);
     } catch (err: any) {
       showToast(`更新失敗，正在還原: ${err.message}`);
       fetchData(false);
@@ -189,7 +192,7 @@ export default function TripPage({ params }: PageProps) {
   const handleSaveTodo = async (formData: any) => {
     try {
       showToast('正在儲存待辦...');
-      await saveTodoData(formData, targetApiUrl);
+      await saveTodoData(formData, tripId);
       showToast('待辦儲存成功！');
       fetchData(true);
     } catch (err: any) {
@@ -200,7 +203,7 @@ export default function TripPage({ params }: PageProps) {
   const handleDeleteTodo = async (rowIndex: number) => {
     try {
       showToast('正在刪除待辦...');
-      await deleteTodoData(rowIndex, targetApiUrl);
+      await deleteTodoData(rowIndex, tripId);
       showToast('刪除成功！');
       fetchData(true);
     } catch (err: any) {
@@ -219,7 +222,7 @@ export default function TripPage({ params }: PageProps) {
     }));
 
     try {
-      await togglePackingStatus(rowIndex, nextStatus, targetApiUrl);
+      await togglePackingStatus(rowIndex, nextStatus, tripId);
     } catch (err: any) {
       showToast(`更新失敗，正在還原: ${err.message}`);
       fetchData(false);
@@ -229,7 +232,7 @@ export default function TripPage({ params }: PageProps) {
   const handleSavePacking = async (formData: any) => {
     try {
       showToast('正在儲存打包項...');
-      await savePackingData(formData, targetApiUrl);
+      await savePackingData(formData, tripId);
       showToast('打包項儲存成功！');
       fetchData(true);
     } catch (err: any) {
@@ -240,7 +243,7 @@ export default function TripPage({ params }: PageProps) {
   const handleDeletePacking = async (rowIndex: number) => {
     try {
       showToast('正在刪除打包項...');
-      await deletePackingData(rowIndex, targetApiUrl);
+      await deletePackingData(rowIndex, tripId);
       showToast('刪除成功！');
       fetchData(true);
     } catch (err: any) {
@@ -252,7 +255,7 @@ export default function TripPage({ params }: PageProps) {
   const handleAddExpense = async (formData: any) => {
     try {
       showToast('正在新增記帳...');
-      await addExpenseData(formData, targetApiUrl);
+      await addExpenseData(formData, tripId);
       showToast('記帳成功！');
       fetchData(true);
     } catch (err: any) {
@@ -263,7 +266,7 @@ export default function TripPage({ params }: PageProps) {
   const handleDeleteExpense = async (rowIndex: number) => {
     try {
       showToast('正在刪除記帳...');
-      await deleteExpenseData(rowIndex, targetApiUrl);
+      await deleteExpenseData(rowIndex, tripId);
       showToast('刪除成功！');
       fetchData(true);
     } catch (err: any) {
@@ -282,7 +285,7 @@ export default function TripPage({ params }: PageProps) {
     }));
 
     try {
-      await toggleShoppingStatus(rowIndex, nextStatus, targetApiUrl);
+      await toggleShoppingStatus(rowIndex, nextStatus, tripId);
     } catch (err: any) {
       showToast(`更新失敗，正在還原: ${err.message}`);
       fetchData(false);
@@ -292,7 +295,7 @@ export default function TripPage({ params }: PageProps) {
   const handleSaveShopping = async (formData: any) => {
     try {
       showToast('正在儲存購物項...');
-      await saveShoppingData(formData, targetApiUrl);
+      await saveShoppingData(formData, tripId);
       showToast('購物項儲存成功！');
       fetchData(true);
     } catch (err: any) {
@@ -303,7 +306,7 @@ export default function TripPage({ params }: PageProps) {
   const handleDeleteShopping = async (rowIndex: number) => {
     try {
       showToast('正在刪除購物項...');
-      await deleteShoppingData(rowIndex, targetApiUrl);
+      await deleteShoppingData(rowIndex, tripId);
       showToast('刪除成功！');
       fetchData(true);
     } catch (err: any) {
@@ -346,24 +349,10 @@ export default function TripPage({ params }: PageProps) {
 
         {/* Content Area */}
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 mt-4 md:px-8">
-          {!targetApiUrl ? (
-            <div className="bg-white border border-amber-200 rounded-3xl p-8 text-center space-y-3 max-w-md mx-auto my-12 shadow-sm">
-              <div className="text-4xl">🏝️</div>
-              <h3 className="text-lg font-extrabold text-slate-900">{tripConfig.title} (籌備中)</h3>
-              <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                此旅程尚未設定 Google Sheet API 端點網址。您可以點擊右上角 ⚙️ 齒輪圖示填入 Web App 網址以啟用連線！
-              </p>
-              <button
-                onClick={() => setSettingsModalOpen(true)}
-                className="px-4 py-2 text-xs font-extrabold bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-all cursor-pointer inline-block"
-              >
-                ⚙️ 設定 API 端點網址
-              </button>
-            </div>
-          ) : isLoading && tripData.itinerary.length === 0 ? (
+          {isLoading && tripData.itinerary.length === 0 && tripData.expenses.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 space-y-3">
               <div className="w-8 h-8 border-4 border-slate-900 border-t-transparent rounded-full animate-spin" />
-              <p className="text-xs font-extrabold text-slate-400">正在讀取 Google Sheet 資料...</p>
+              <p className="text-xs font-extrabold text-slate-400">正在讀取雲端資料庫...</p>
             </div>
           ) : (
             <>
