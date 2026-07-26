@@ -295,42 +295,61 @@ export async function updateTripSettings(
   }
 }
 
+/** 根據 DB 實際擁有的欄位動態建立 Payload */
+function matchDbPayload(sampleRow: any, map: Record<string, [any, ...string[]]>, tripId: string): Record<string, any> {
+  const payload: Record<string, any> = { trip_id: tripId };
+  const dbKeys = sampleRow ? Object.keys(sampleRow) : [];
+
+  Object.values(map).forEach(([val, ...possibleCols]) => {
+    if (dbKeys.length > 0) {
+      for (const col of possibleCols) {
+        if (dbKeys.includes(col)) {
+          payload[col] = val;
+          break;
+        }
+      }
+    } else {
+      // 若 Table 目前完全為空，帶第一個優先的欄位名
+      payload[possibleCols[0]] = val;
+    }
+  });
+
+  return payload;
+}
+
 /** 行程新增/編輯/儲存 */
 export async function saveItineraryData(formData: any, tripId = 'la-2026'): Promise<string> {
   const { rowIndex, day, time, type, title, content, links } = formData;
   const dayMatch = day ? day.match(/\d+/) : null;
   const dayNumber = dayMatch ? parseInt(dayMatch[0], 10) : 1;
 
-  const payload = {
-    trip_id: tripId,
-    day_number: dayNumber,
-    time: time || '',
-    category: type || '觀光',
-    title: title || '未命名行程',
-    note: content || '',
-    location: links || '',
-    links: links || '',
-    url: links || '',
+  const { data: list } = await supabase
+    .from('itinerary_items')
+    .select('*')
+    .eq('trip_id', tripId)
+    .order('created_at', { ascending: true });
+
+  const sampleRow = list?.[0] || null;
+  const targetRow = (rowIndex && rowIndex >= 2 && list) ? list[rowIndex - 2] : null;
+
+  const map: Record<string, [any, ...string[]]> = {
+    dayNumber: [dayNumber, 'day_number', 'day', 'Day'],
+    time: [time || '', 'time', 'Time'],
+    category: [type || '觀光', 'category', 'Category', 'type', 'Type'],
+    title: [title || '未命名行程', 'title', 'Title'],
+    note: [content || '', 'note', 'Note', 'content', 'Content'],
+    location: [links || '', 'location', 'links', 'Links', 'url', 'URL'],
   };
 
-  if (rowIndex && rowIndex >= 2) {
-    const { data } = await supabase
-      .from('itinerary_items')
-      .select('id')
-      .eq('trip_id', tripId)
-      .order('created_at', { ascending: true });
+  const payload = matchDbPayload(targetRow || sampleRow, map, tripId);
 
-    if (data && data[rowIndex - 2]) {
-      const { error } = await supabase
-        .from('itinerary_items')
-        .update(payload)
-        .eq('id', data[rowIndex - 2].id);
-      if (error) throw new Error(`更新行程失敗: ${error.message}`);
-      return '更新成功';
-    }
+  if (targetRow) {
+    const { error } = await supabase.from('itinerary_items').update(payload).eq('id', targetRow.id);
+    if (error) throw new Error(`更新行程失敗: ${error.message}`);
+    return '更新成功';
   }
 
-  const { error } = await supabase.from('itinerary_items').insert(payload);
+  const { error } = await supabase.from('itinerary_items').insert({ ...payload, is_visited: false });
   if (error) throw new Error(`儲存行程失敗: ${error.message}`);
   return '儲存成功';
 }
@@ -344,9 +363,11 @@ export async function deleteItineraryData(rowIndex: number, tripId = 'la-2026'):
 }
 
 export async function toggleVisitedStatus(rowIndex: number, isChecked: boolean, tripId = 'la-2026'): Promise<string> {
-  const { data } = await supabase.from('itinerary_items').select('id').eq('trip_id', tripId).order('created_at', { ascending: true });
+  const { data } = await supabase.from('itinerary_items').select('*').eq('trip_id', tripId).order('created_at', { ascending: true });
   if (data && data[rowIndex - 2]) {
-    await supabase.from('itinerary_items').update({ is_visited: isChecked }).eq('id', data[rowIndex - 2].id);
+    const row = data[rowIndex - 2];
+    const key = Object.keys(row).find((k) => ['is_visited', 'Is_Visited', 'visited'].includes(k)) || 'is_visited';
+    await supabase.from('itinerary_items').update({ [key]: isChecked }).eq('id', row.id);
   }
   return '已更新';
 }
@@ -354,33 +375,32 @@ export async function toggleVisitedStatus(rowIndex: number, isChecked: boolean, 
 /** 待辦事項 */
 export async function saveTodoData(formData: any, tripId = 'la-2026'): Promise<string> {
   const { rowIndex, task, category, note } = formData;
-  const payload = {
-    trip_id: tripId,
-    category: category || '待辦',
-    task: task || '新待辦事項',
-    task_name: task || '新待辦事項',
-    note: note || '',
-    due_date: note || '',
+
+  const { data: list } = await supabase
+    .from('todo_items')
+    .select('*')
+    .eq('trip_id', tripId)
+    .order('created_at', { ascending: true });
+
+  const sampleRow = list?.[0] || null;
+  const targetRow = (rowIndex && rowIndex >= 2 && list) ? list[rowIndex - 2] : null;
+
+  const map: Record<string, [any, ...string[]]> = {
+    category: [category || '待辦', 'category', 'Category'],
+    task: [task || '新待辦事項', 'task', 'Task', 'task_name'],
+    note: [note || '', 'note', 'Note', 'due_date'],
   };
 
-  if (rowIndex && rowIndex >= 2) {
-    const { data } = await supabase
-      .from('todo_items')
-      .select('id')
-      .eq('trip_id', tripId)
-      .order('created_at', { ascending: true });
+  const payload = matchDbPayload(targetRow || sampleRow, map, tripId);
 
-    if (data && data[rowIndex - 2]) {
-      const { error } = await supabase
-        .from('todo_items')
-        .update(payload)
-        .eq('id', data[rowIndex - 2].id);
-      if (error) throw new Error(`更新待辦失敗: ${error.message}`);
-      return '更新成功';
-    }
+  if (targetRow) {
+    const { error } = await supabase.from('todo_items').update(payload).eq('id', targetRow.id);
+    if (error) throw new Error(`更新待辦失敗: ${error.message}`);
+    return '更新成功';
   }
 
-  const { error } = await supabase.from('todo_items').insert({ ...payload, completed: false });
+  const statusKey = sampleRow && Object.keys(sampleRow).find((k) => ['completed', 'is_done', 'Is_Done'].includes(k)) || 'completed';
+  const { error } = await supabase.from('todo_items').insert({ ...payload, [statusKey]: false });
   if (error) throw new Error(`儲存待辦失敗: ${error.message}`);
   return '儲存成功';
 }
@@ -394,9 +414,11 @@ export async function deleteTodoData(rowIndex: number, tripId = 'la-2026'): Prom
 }
 
 export async function toggleTodoStatus(rowIndex: number, isChecked: boolean, tripId = 'la-2026'): Promise<string> {
-  const { data } = await supabase.from('todo_items').select('id').eq('trip_id', tripId).order('created_at', { ascending: true });
+  const { data } = await supabase.from('todo_items').select('*').eq('trip_id', tripId).order('created_at', { ascending: true });
   if (data && data[rowIndex - 2]) {
-    await supabase.from('todo_items').update({ completed: isChecked }).eq('id', data[rowIndex - 2].id);
+    const row = data[rowIndex - 2];
+    const key = Object.keys(row).find((k) => ['completed', 'is_done', 'Is_Done'].includes(k)) || 'completed';
+    await supabase.from('todo_items').update({ [key]: isChecked }).eq('id', row.id);
   }
   return '已更新';
 }
@@ -405,30 +427,32 @@ export async function toggleTodoStatus(rowIndex: number, isChecked: boolean, tri
 export async function savePackingData(formData: any, tripId = 'la-2026'): Promise<string> {
   const { rowIndex, item, category, person, note } = formData;
   
-  const payload: Record<string, any> = {
-    trip_id: tripId,
-    category: category || '個人物品',
-    person: person || '全員',
-    item: item || '物品',
-    note: note || '',
+  const { data: list } = await supabase
+    .from('packing_items')
+    .select('*')
+    .eq('trip_id', tripId)
+    .order('created_at', { ascending: true });
+
+  const sampleRow = list?.[0] || null;
+  const targetRow = (rowIndex && rowIndex >= 2 && list) ? list[rowIndex - 2] : null;
+
+  const map: Record<string, [any, ...string[]]> = {
+    category: [category || '個人物品', 'category', 'Category'],
+    person: [person || '全員', 'person', 'Person', 'owner'],
+    item: [item || '物品', 'item', 'Item', 'item_name'],
+    note: [note || '', 'note', 'Note'],
   };
 
-  if (rowIndex && rowIndex >= 2) {
-    const { data } = await supabase
-      .from('packing_items')
-      .select('id')
-      .eq('trip_id', tripId)
-      .order('created_at', { ascending: true });
+  const payload = matchDbPayload(targetRow || sampleRow, map, tripId);
 
-    if (data && data[rowIndex - 2]) {
-      const targetId = data[rowIndex - 2].id;
-      const { error } = await supabase.from('packing_items').update(payload).eq('id', targetId);
-      if (error) throw new Error(`更新行李失敗: ${error.message}`);
-      return '更新成功';
-    }
+  if (targetRow) {
+    const { error } = await supabase.from('packing_items').update(payload).eq('id', targetRow.id);
+    if (error) throw new Error(`更新行李失敗: ${error.message}`);
+    return '更新成功';
   }
 
-  const { error } = await supabase.from('packing_items').insert({ ...payload, is_packed: false });
+  const statusKey = sampleRow && Object.keys(sampleRow).find((k) => ['is_packed', 'packed', 'Is_Packed', 'is_done'].includes(k)) || 'is_packed';
+  const { error } = await supabase.from('packing_items').insert({ ...payload, [statusKey]: false });
   if (error) throw new Error(`儲存行李失敗: ${error.message}`);
   return '儲存成功';
 }
@@ -442,9 +466,11 @@ export async function deletePackingData(rowIndex: number, tripId = 'la-2026'): P
 }
 
 export async function togglePackingStatus(rowIndex: number, isChecked: boolean, tripId = 'la-2026'): Promise<string> {
-  const { data } = await supabase.from('packing_items').select('id').eq('trip_id', tripId).order('created_at', { ascending: true });
+  const { data } = await supabase.from('packing_items').select('*').eq('trip_id', tripId).order('created_at', { ascending: true });
   if (data && data[rowIndex - 2]) {
-    await supabase.from('packing_items').update({ packed: isChecked }).eq('id', data[rowIndex - 2].id);
+    const row = data[rowIndex - 2];
+    const key = Object.keys(row).find((k) => ['is_packed', 'packed', 'Is_Packed', 'is_done'].includes(k)) || 'is_packed';
+    await supabase.from('packing_items').update({ [key]: isChecked }).eq('id', row.id);
   }
   return '已更新';
 }
@@ -452,35 +478,32 @@ export async function togglePackingStatus(rowIndex: number, isChecked: boolean, 
 /** 記帳 */
 export async function addExpenseData(formData: any, tripId = 'la-2026'): Promise<string> {
   const { rowIndex, item, category, amount, currency, paidBy, split, note } = formData;
-  const payload = {
-    trip_id: tripId,
-    title: item || '消費',
-    item_name: item || '消費',
-    category: category || '餐飲',
-    amount: Number(amount || 0),
-    currency: currency || 'USD',
-    paid_by: paidBy || 'Jo',
-    payer: paidBy || 'Jo',
-    split: split || 'Both',
-    note: note || '',
-    notes: note || '',
+
+  const { data: list } = await supabase
+    .from('expense_items')
+    .select('*')
+    .eq('trip_id', tripId)
+    .order('created_at', { ascending: true });
+
+  const sampleRow = list?.[0] || null;
+  const targetRow = (rowIndex && rowIndex >= 2 && list) ? list[rowIndex - 2] : null;
+
+  const map: Record<string, [any, ...string[]]> = {
+    category: [category || '餐飲', 'category', 'Category'],
+    title: [item || '消費', 'title', 'Title', 'item', 'Item', 'item_name'],
+    amount: [Number(amount || 0), 'amount', 'Amount'],
+    currency: [currency || 'USD', 'currency', 'Currency'],
+    paidBy: [paidBy || 'Jo', 'paid_by', 'Paid By', 'Paid_By', 'payer'],
+    split: [split || 'Both', 'split', 'Split'],
+    note: [note || '', 'note', 'Note', 'notes'],
   };
 
-  if (rowIndex && rowIndex >= 2) {
-    const { data } = await supabase
-      .from('expense_items')
-      .select('id')
-      .eq('trip_id', tripId)
-      .order('created_at', { ascending: true });
+  const payload = matchDbPayload(targetRow || sampleRow, map, tripId);
 
-    if (data && data[rowIndex - 2]) {
-      const { error } = await supabase
-        .from('expense_items')
-        .update(payload)
-        .eq('id', data[rowIndex - 2].id);
-      if (error) throw new Error(`更新記帳失敗: ${error.message}`);
-      return '更新成功';
-    }
+  if (targetRow) {
+    const { error } = await supabase.from('expense_items').update(payload).eq('id', targetRow.id);
+    if (error) throw new Error(`更新記帳失敗: ${error.message}`);
+    return '更新成功';
   }
 
   const { error } = await supabase.from('expense_items').insert(payload);
@@ -499,35 +522,35 @@ export async function deleteExpenseData(rowIndex: number, tripId = 'la-2026'): P
 /** 購物清單 */
 export async function saveShoppingData(formData: any, tripId = 'la-2026'): Promise<string> {
   const { rowIndex, item, store, forWhom, quantity, note, image } = formData;
-  const payload = {
-    trip_id: tripId,
-    item_name: item || '購物品',
-    item: item || '購物品',
-    store: store || '一般店家',
-    for_whom: forWhom || '自己',
-    quantity: quantity || '1',
-    image: image || '',
-    note: note || '',
+
+  const { data: list } = await supabase
+    .from('shopping_items')
+    .select('*')
+    .eq('trip_id', tripId)
+    .order('created_at', { ascending: true });
+
+  const sampleRow = list?.[0] || null;
+  const targetRow = (rowIndex && rowIndex >= 2 && list) ? list[rowIndex - 2] : null;
+
+  const map: Record<string, [any, ...string[]]> = {
+    store: [store || '一般店家', 'store', 'Store'],
+    forWhom: [forWhom || '自己', 'for_whom', 'For Whom', 'For_Whom', 'forWhom'],
+    item: [item || '購物品', 'item_name', 'item', 'Item'],
+    quantity: [quantity || '1', 'quantity', 'Quantity'],
+    image: [image || '', 'image', 'Image'],
+    note: [note || '', 'note', 'Note'],
   };
 
-  if (rowIndex && rowIndex >= 2) {
-    const { data } = await supabase
-      .from('shopping_items')
-      .select('id')
-      .eq('trip_id', tripId)
-      .order('created_at', { ascending: true });
+  const payload = matchDbPayload(targetRow || sampleRow, map, tripId);
 
-    if (data && data[rowIndex - 2]) {
-      const { error } = await supabase
-        .from('shopping_items')
-        .update(payload)
-        .eq('id', data[rowIndex - 2].id);
-      if (error) throw new Error(`更新購物清單失敗: ${error.message}`);
-      return '更新成功';
-    }
+  if (targetRow) {
+    const { error } = await supabase.from('shopping_items').update(payload).eq('id', targetRow.id);
+    if (error) throw new Error(`更新購物清單失敗: ${error.message}`);
+    return '更新成功';
   }
 
-  const { error } = await supabase.from('shopping_items').insert({ ...payload, bought: false });
+  const statusKey = sampleRow && Object.keys(sampleRow).find((k) => ['bought', 'is_done', 'Is_Done', 'Done'].includes(k)) || 'bought';
+  const { error } = await supabase.from('shopping_items').insert({ ...payload, [statusKey]: false });
   if (error) throw new Error(`儲存購物清單失敗: ${error.message}`);
   return '儲存成功';
 }
@@ -541,9 +564,11 @@ export async function deleteShoppingData(rowIndex: number, tripId = 'la-2026'): 
 }
 
 export async function toggleShoppingStatus(rowIndex: number, isChecked: boolean, tripId = 'la-2026'): Promise<string> {
-  const { data } = await supabase.from('shopping_items').select('id').eq('trip_id', tripId).order('created_at', { ascending: true });
+  const { data } = await supabase.from('shopping_items').select('*').eq('trip_id', tripId).order('created_at', { ascending: true });
   if (data && data[rowIndex - 2]) {
-    await supabase.from('shopping_items').update({ bought: isChecked }).eq('id', data[rowIndex - 2].id);
+    const row = data[rowIndex - 2];
+    const key = Object.keys(row).find((k) => ['bought', 'is_done', 'Is_Done', 'Done'].includes(k)) || 'bought';
+    await supabase.from('shopping_items').update({ [key]: isChecked }).eq('id', row.id);
   }
   return '已更新';
 }
