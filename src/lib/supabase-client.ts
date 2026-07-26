@@ -131,10 +131,10 @@ export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promi
 
     const todo: TodoItem[] = (todoRes.data || []).map((row, idx) => ({
       rowIndex: idx + 2,
-      category: row.Category || row.category || '待辦',
-      task: row.Task || row.task || row.task_name || '',
-      note: row.Note || row.note || (row.due_date ? `到期日: ${row.due_date}` : ''),
-      isDone: !!(row.Is_Done ?? row.completed ?? false),
+      category: row.category || row.Category || '待辦',
+      task: row.task || row.Task || row.task_name || '',
+      note: row.note || row.Note || (row.due_date ? `到期日: ${row.due_date}` : ''),
+      isDone: !!(row.completed ?? row.Is_Done ?? row.is_done ?? false),
     }));
 
     const packing: PackingItem[] = (packingRes.data || []).map((row, idx) => ({
@@ -336,9 +336,10 @@ export async function saveTodoData(formData: any, tripId = 'la-2026'): Promise<s
   const { task, category, note } = formData;
   const { error } = await supabase.from('todo_items').insert({
     trip_id: tripId,
-    task_name: task || '新待辦事項',
+    category: category || '待辦',
+    task: task || '新待辦事項',
+    note: note || '',
     completed: false,
-    due_date: note || '',
   });
   if (error) throw new Error(`儲存待辦失敗: ${error.message}`);
   return '儲存成功';
