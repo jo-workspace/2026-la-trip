@@ -236,59 +236,58 @@ export async function updateTripSettings(
     dates?: string;
   }
 ): Promise<void> {
-  // 基礎 payload
-  const basePayload: Record<string, any> = {
+  // 1. 查詢現有資料與欄位名稱
+  const { data: list } = await supabase
+    .from('trip_settings')
+    .select('*')
+    .eq('trip_id', tripId)
+    .limit(1);
+
+  const existingRow = list?.[0] || null;
+  const dbKeys = existingRow ? Object.keys(existingRow) : [];
+
+  const payload: Record<string, any> = {
     start_date: settings.startDate ?? '',
     fx_rate: settings.fxRate ?? 32.5,
     budget_twd: settings.budgetTwd ?? 0,
     trip_note: settings.tripNote ?? '',
   };
 
-  // 完整 payload
-  const fullPayload: Record<string, any> = {
-    ...basePayload,
-    foreign_currency: settings.foreignCurrency ?? 'USD',
-    companions: settings.companions ?? 'Jo, Will',
-  };
-
-  const { data: existing } = await supabase
-    .from('trip_settings')
-    .select('trip_id')
-    .eq('trip_id', tripId)
-    .limit(1);
+  // 只有當 DB 擁有此欄位（或是準備全新建立）才帶入
+  if (dbKeys.length === 0 || dbKeys.includes('foreign_currency')) {
+    payload.foreign_currency = settings.foreignCurrency ?? 'USD';
+  }
+  if (dbKeys.length === 0 || dbKeys.includes('companions')) {
+    payload.companions = settings.companions ?? 'Jo, Will';
+  }
 
   let settingsError;
-  if (existing && existing.length > 0) {
+  if (existingRow) {
     const { error } = await supabase
       .from('trip_settings')
-      .update(fullPayload)
+      .update(payload)
       .eq('trip_id', tripId);
     settingsError = error;
 
+    // 容錯重試：若因新欄位出錯，降級只更新基礎 4 欄
     if (settingsError) {
-      const { error: retryError } = await supabase
+      const { start_date, fx_rate, budget_twd, trip_note } = payload;
+      const { error: retryErr } = await supabase
         .from('trip_settings')
-        .update(basePayload)
+        .update({ start_date, fx_rate, budget_twd, trip_note })
         .eq('trip_id', tripId);
-      settingsError = retryError;
+      settingsError = retryErr;
     }
   } else {
     const { error } = await supabase
       .from('trip_settings')
-      .insert({ trip_id: tripId, categories: '[]', ...fullPayload });
+      .insert({ trip_id: tripId, categories: '[]', ...payload });
     settingsError = error;
-
-    if (settingsError) {
-      const { error: retryError } = await supabase
-        .from('trip_settings')
-        .insert({ trip_id: tripId, categories: '[]', ...basePayload });
-      settingsError = retryError;
-    }
   }
 
   if (settingsError) throw new Error(`設定儲存失敗: ${settingsError.message}`);
 
-  // 同步更新 trips 資料表（旅程卡片名稱與日期）
+  // 2. 同步更新 trips 資料表（旅程卡片名稱與日期）
   if (settings.title !== undefined || settings.dates !== undefined) {
     try {
       await supabase
@@ -296,7 +295,7 @@ export async function updateTripSettings(
         .update({ title: settings.title, dates: settings.dates })
         .eq('id', tripId);
     } catch (e) {
-      console.warn('trips table update skipped or failed:', e);
+      console.warn('trips update skipped:', e);
     }
   }
 }
