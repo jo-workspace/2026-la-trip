@@ -183,6 +183,7 @@ export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promi
     const budgetTwd = settingsData?.budget_twd ? Number(settingsData.budget_twd) : 0;
     const tripNote = settingsData?.trip_note || '';
     const foreignCurrency = settingsData?.foreign_currency || 'USD';
+    const companions = settingsData?.companions || 'Jo, Will';
     const tripTitle = settingsData?.title || tripData?.title || tripId;
     const tripDates = settingsData?.dates || tripData?.dates || '';
 
@@ -197,6 +198,7 @@ export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promi
       startDate,
       budgetTwd,
       foreignCurrency,
+      companions,
       tripTitle,
       tripDates,
     };
@@ -213,6 +215,7 @@ export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promi
       startDate: '',
       budgetTwd: 0,
       foreignCurrency: 'USD',
+      companions: 'Jo, Will',
       tripTitle: '',
       tripDates: '',
     };
@@ -228,6 +231,7 @@ export async function updateTripSettings(
     budgetTwd?: number;
     tripNote?: string;
     foreignCurrency?: string;
+    companions?: string;
     title?: string;
     dates?: string;
   }
@@ -244,6 +248,7 @@ export async function updateTripSettings(
   const fullPayload: Record<string, any> = {
     ...basePayload,
     foreign_currency: settings.foreignCurrency ?? 'USD',
+    companions: settings.companions ?? 'Jo, Will',
   };
 
   const { data: existing } = await supabase

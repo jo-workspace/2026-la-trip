@@ -16,6 +16,7 @@ interface SettingsModalProps {
   budgetTwd: number;
   tripNote: string;
   foreignCurrency: string;
+  companions?: string;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -30,6 +31,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   budgetTwd,
   tripNote,
   foreignCurrency,
+  companions,
 }) => {
   const [title, setTitle] = useState('');
   const [dates, setDates] = useState('');
@@ -38,6 +40,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [budget, setBudget] = useState('');
   const [note, setNote] = useState('');
   const [currency, setCurrency] = useState('USD');
+  const [people, setPeople] = useState('Jo, Will');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -51,9 +54,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setBudget(budgetTwd ? String(budgetTwd) : '');
       setNote(tripNote || '');
       setCurrency(foreignCurrency || 'USD');
+      setPeople(companions || 'Jo, Will');
       setError('');
     }
-  }, [isOpen, tripTitle, tripDates, startDate, fxRate, budgetTwd, tripNote, foreignCurrency]);
+  }, [isOpen, tripTitle, tripDates, startDate, fxRate, budgetTwd, tripNote, foreignCurrency, companions]);
 
   if (!isOpen) return null;
 
@@ -70,6 +74,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         budgetTwd: budget ? parseInt(budget, 10) : 0,
         tripNote: note,
         foreignCurrency: currency.trim().toUpperCase() || 'USD',
+        companions: people.trim() || 'Jo, Will',
       });
       onSaved();
       onClose();
@@ -132,6 +137,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   onChange={(e) => setDates(e.target.value)}
                   placeholder="例：2026/08"
                   className="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1">
+                  同行人員
+                  <span className="text-slate-400 font-normal ml-1">（用逗號分隔，記帳與打包自動連動）</span>
+                </label>
+                <input
+                  type="text"
+                  value={people}
+                  onChange={(e) => setPeople(e.target.value)}
+                  placeholder="例：Jo, Will, Alex"
+                  className="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold"
                 />
               </div>
             </div>

@@ -408,6 +408,7 @@ export default function TripPage({ params }: PageProps) {
                 <ExpensesTab
                   data={tripData.expenses}
                   fxRate={tripData.fxRate}
+                  companions={tripData.companions}
                   onAddExpense={handleAddExpense}
                   onDeleteExpense={handleDeleteExpense}
                 />
@@ -478,6 +479,7 @@ export default function TripPage({ params }: PageProps) {
         budgetTwd={tripData.budgetTwd || 0}
         tripNote={tripData.tripNote}
         foreignCurrency={tripData.foreignCurrency || 'USD'}
+        companions={tripData.companions}
       />
 
       <LightboxModal imageUrl={lightboxUrl} onClose={() => setLightboxUrl(null)} />

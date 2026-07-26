@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ExpenseItem } from '@/types/trip';
-import { Plus, Trash2, Banknote, DollarSign } from 'lucide-react';
+import { Plus, Trash2, Banknote, DollarSign, Users } from 'lucide-react';
 
 interface ExpensesTabProps {
   data: ExpenseItem[];
   fxRate: number;
+  companions?: string;
   onAddExpense: (formData: any) => Promise<void>;
   onDeleteExpense: (rowIndex: number) => Promise<void>;
 }
@@ -24,64 +25,131 @@ const CATEGORY_EMOJIS: Record<string, string> = {
 export const ExpensesTab: React.FC<ExpensesTabProps> = ({
   data,
   fxRate = 32.5,
+  companions = 'Jo, Will',
   onAddExpense,
   onDeleteExpense,
 }) => {
-  // Format fxRate to max 4 decimal places
   const displayFxRate = Number(parseFloat(Number(fxRate || 32.5).toFixed(4)));
 
-  // Quick form state
+  // 解析同行人員清單
+  const companionSet = new Set<string>();
+  if (companions) {
+    companions.split(/[\n,，]+/).forEach((p) => {
+      const trimmed = p.trim();
+      if (trimmed) companionSet.add(trimmed);
+    });
+  }
+  // 如果舊資料有非清單內的人員，自動補充進去
+  data.forEach((exp) => {
+    if (exp.paidBy && exp.paidBy !== '均分' && exp.paidBy !== 'Both') companionSet.add(exp.paidBy.trim());
+    if (exp.split && exp.split !== '均分' && exp.split !== 'Both' && exp.split !== 'ALL') companionSet.add(exp.split.trim());
+  });
+  const members = Array.from(companionSet).length > 0 ? Array.from(companionSet) : ['Jo', 'Will'];
+
+  // Form states
   const [item, setItem] = useState('');
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState<'USD' | 'TWD'>('USD');
   const [category, setCategory] = useState('🍔');
-  const [paidBy, setPaidBy] = useState<'Jo' | 'Will'>('Jo');
-  const [split, setSplit] = useState<'Both' | 'Jo' | 'Will'>('Both');
+  const [paidBy, setPaidBy] = useState<string>(members[0] || 'Jo');
+  const [split, setSplit] = useState<string>('均分');
   const [note, setNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Calculations
+  // 當同行人員改變時，若目前選擇的付款人不符，重置為第一個
+  useEffect(() => {
+    if (!members.includes(paidBy)) {
+      setPaidBy(members[0] || 'Jo');
+    }
+  }, [companions]);
+
+  // 動態多人群體分帳計算
   let totalTWD = 0;
-  let joPaidTWD = 0;
-  let willPaidTWD = 0;
-  let joShareTWD = 0;
-  let willShareTWD = 0;
-  let settlementOffsetTWD = 0;
+  const paidTWD: Record<string, number> = {};
+  const shareTWD: Record<string, number> = {};
+  const settlementOffsetTWD: Record<string, number> = {};
+
+  members.forEach((m) => {
+    paidTWD[m] = 0;
+    shareTWD[m] = 0;
+    settlementOffsetTWD[m] = 0;
+  });
 
   data.forEach((exp) => {
     let amt = typeof exp.amount === 'number' ? exp.amount : parseFloat(exp.amount) || 0;
     let amtTWD = exp.currency === 'USD' ? amt * fxRate : amt;
 
+    // 處理系統結清對沖紀錄
     if (exp.item && exp.item.includes('系統結清')) {
-      if (exp.paidBy === 'Jo') settlementOffsetTWD += amtTWD;
-      else if (exp.paidBy === 'Will') settlementOffsetTWD -= amtTWD;
+      if (exp.paidBy && settlementOffsetTWD[exp.paidBy] !== undefined) {
+        settlementOffsetTWD[exp.paidBy] += amtTWD;
+      }
+      if (exp.split && settlementOffsetTWD[exp.split] !== undefined) {
+        settlementOffsetTWD[exp.split] -= amtTWD;
+      }
       return;
     }
 
     totalTWD += amtTWD;
-    if (exp.paidBy === 'Jo') joPaidTWD += amtTWD;
-    if (exp.paidBy === 'Will') willPaidTWD += amtTWD;
 
-    if (exp.split === 'Jo') {
-      joShareTWD += amtTWD;
-    } else if (exp.split === 'Will') {
-      willShareTWD += amtTWD;
+    // 累計付款金額
+    const payer = exp.paidBy ? exp.paidBy.trim() : members[0];
+    if (paidTWD[payer] !== undefined) {
+      paidTWD[payer] += amtTWD;
     } else {
-      joShareTWD += amtTWD / 2;
-      willShareTWD += amtTWD / 2;
+      paidTWD[payer] = amtTWD;
+    }
+
+    // 累計應分攤金額
+    const splitTarget = exp.split ? exp.split.trim() : '均分';
+    if (splitTarget === 'Both' || splitTarget === '均分' || splitTarget === 'ALL') {
+      const sharePerPerson = amtTWD / members.length;
+      members.forEach((m) => {
+        shareTWD[m] = (shareTWD[m] || 0) + sharePerPerson;
+      });
+    } else {
+      if (shareTWD[splitTarget] !== undefined) {
+        shareTWD[splitTarget] += amtTWD;
+      } else {
+        shareTWD[splitTarget] = amtTWD;
+      }
     }
   });
 
-  const joOverage = joPaidTWD - joShareTWD + settlementOffsetTWD;
-  const roundedOverage = Math.round(joOverage);
+  // 計算每人淨餘額 (+ 表示溢付/應收，- 表示欠款/應付)
+  const netBalances: Record<string, number> = {};
+  members.forEach((m) => {
+    netBalances[m] = (paidTWD[m] || 0) - (shareTWD[m] || 0) + (settlementOffsetTWD[m] || 0);
+  });
 
-  let settlementText = '兩不相欠';
-  if (Math.abs(roundedOverage) > 1) {
-    if (roundedOverage > 0) {
-      settlementText = `Will 應給 Jo $${roundedOverage.toLocaleString()}`;
-    } else {
-      settlementText = `Jo 應給 Will $${Math.abs(roundedOverage).toLocaleString()}`;
+  // 生成結算指示 (債務撮合演算法)
+  const debtors: { name: string; amount: number }[] = [];
+  const creditors: { name: string; amount: number }[] = [];
+
+  members.forEach((m) => {
+    const bal = Math.round(netBalances[m] || 0);
+    if (bal < -1) debtors.push({ name: m, amount: Math.abs(bal) });
+    else if (bal > 1) creditors.push({ name: m, amount: bal });
+  });
+
+  const settlementInstructions: string[] = [];
+  let dIdx = 0;
+  let cIdx = 0;
+
+  while (dIdx < debtors.length && cIdx < creditors.length) {
+    const debtor = debtors[dIdx];
+    const creditor = creditors[cIdx];
+    const settleAmt = Math.min(debtor.amount, creditor.amount);
+
+    if (settleAmt > 1) {
+      settlementInstructions.push(`${debtor.name} 應給 ${creditor.name} $${settleAmt.toLocaleString()}`);
     }
+
+    debtor.amount -= settleAmt;
+    creditor.amount -= settleAmt;
+
+    if (debtor.amount <= 1) dIdx++;
+    if (creditor.amount <= 1) cIdx++;
   }
 
   const handleQuickSubmit = async (e: React.FormEvent) => {
@@ -108,23 +176,26 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
   };
 
   const handleClearSettlement = async () => {
-    if (Math.abs(roundedOverage) <= 1) return;
-    const amountVal = Math.round(Math.abs(joOverage));
-    const payer = joOverage > 0 ? 'Will' : 'Jo';
-    const payee = joOverage > 0 ? 'Jo' : 'Will';
+    if (settlementInstructions.length === 0) return;
+    const firstInstr = settlementInstructions[0];
+    const match = firstInstr.match(/(.+) 應給 (.+) \$([\d,]+)/);
+    if (!match) return;
 
-    if (!confirm(`確認進行結清清算？將新增一筆 ${payer} 給 ${payee} $${amountVal} TWD 的系統紀錄。`)) return;
+    const [, debtorName, creditorName, amtStr] = match;
+    const amountVal = parseInt(amtStr.replace(/,/g, ''), 10);
+
+    if (!confirm(`確認進行結清清算？將新增一筆 ${debtorName} 支付 ${creditorName} $${amountVal} TWD 的系統紀錄。`)) return;
 
     setIsSubmitting(true);
     try {
       await onAddExpense({
         category: '💵',
-        item: `系統結清: ${payer} 支付 ${payee}`,
+        item: `系統結清: ${debtorName} 支付 ${creditorName}`,
         currency: 'TWD',
         amount: amountVal,
-        paidBy: payer,
-        split: payee,
-        note: '點擊系統結清產生的對沖紀錄',
+        paidBy: debtorName,
+        split: creditorName,
+        note: '點擊一鍵結清產生的對沖紀錄',
       });
     } finally {
       setIsSubmitting(false);
@@ -140,44 +211,57 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
         {/* Left Column: Settlement Dashboard & Quick Input Form */}
         <div className="md:col-span-5 space-y-4">
           {/* Settlement Banner */}
-          <div className="bg-gradient-to-br from-slate-800 to-slate-900 text-white p-5 rounded-2xl shadow-sm border border-slate-700/50 text-center">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">
-              分帳結算 (匯率 1:{displayFxRate})
-            </span>
-            <div className="text-xl font-extrabold text-amber-400 tracking-tight">
-              {settlementText}
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 text-white p-5 rounded-2xl shadow-sm border border-slate-700/50 text-center space-y-2">
+            <div className="flex items-center justify-center space-x-1.5 text-xs font-bold uppercase tracking-wider text-slate-400">
+              <Users className="w-3.5 h-3.5" />
+              <span>分帳結算 (同行 {members.length} 人 · 匯率 1:{displayFxRate})</span>
             </div>
 
-            {Math.abs(roundedOverage) > 1 && (
+            <div className="space-y-1">
+              {settlementInstructions.length === 0 ? (
+                <div className="text-lg font-extrabold text-emerald-400 tracking-tight">
+                  目前帳目兩不相欠！✨
+                </div>
+              ) : (
+                settlementInstructions.map((instr, idx) => (
+                  <div key={idx} className="text-lg font-extrabold text-amber-400 tracking-tight">
+                    {instr}
+                  </div>
+                ))
+              )}
+            </div>
+
+            {settlementInstructions.length > 0 && (
               <button
                 onClick={handleClearSettlement}
                 disabled={isSubmitting}
-                className="mt-3 px-4 py-1.5 text-xs font-bold bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl transition-all active:scale-95 cursor-pointer shadow-xs inline-flex items-center space-x-1"
+                className="mt-2 px-4 py-1.5 text-xs font-bold bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl transition-all active:scale-95 cursor-pointer shadow-xs inline-flex items-center space-x-1"
               >
                 <Banknote className="w-3.5 h-3.5" />
-                <span>一鍵點擊結清</span>
+                <span>一鍵點擊結清首筆</span>
               </button>
             )}
           </div>
 
-          {/* User Spend Breakdown */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white border border-slate-100 p-4 rounded-2xl text-center shadow-2xs">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                Jo 應負擔總額
-              </span>
-              <span className="text-base font-mono font-black text-slate-900 mt-1 block">
-                ${Math.round(joShareTWD).toLocaleString()} TWD
-              </span>
-            </div>
-            <div className="bg-white border border-slate-100 p-4 rounded-2xl text-center shadow-2xs">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                Will 應負擔總額
-              </span>
-              <span className="text-base font-mono font-black text-slate-900 mt-1 block">
-                ${Math.round(willShareTWD).toLocaleString()} TWD
-              </span>
-            </div>
+          {/* User Spend Breakdown Grid */}
+          <div className={`grid gap-2.5 ${members.length > 2 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+            {members.map((m) => {
+              const share = Math.round(shareTWD[m] || 0);
+              const paid = Math.round(paidTWD[m] || 0);
+              return (
+                <div key={m} className="bg-white border border-slate-100 p-3 rounded-2xl text-center shadow-2xs">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block truncate">
+                    {m} 應負擔
+                  </span>
+                  <span className="text-sm font-mono font-black text-slate-900 mt-0.5 block truncate">
+                    ${share.toLocaleString()}
+                  </span>
+                  <span className="text-[9px] font-bold text-slate-400 block mt-0.5">
+                    已付 ${paid.toLocaleString()}
+                  </span>
+                </div>
+              );
+            })}
           </div>
 
           {/* Quick Expense Form */}
@@ -199,7 +283,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
                 type="text"
                 value={item}
                 onChange={(e) => setItem(e.target.value)}
-                placeholder="品項名稱 (如: 麥當勞)"
+                placeholder="品項名稱 (如: 晚餐)"
                 required
                 className="col-span-3 bg-slate-800 text-white text-sm font-semibold px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-amber-400 transition-all border border-slate-700 placeholder:text-slate-500"
               />
@@ -251,63 +335,51 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
             </div>
 
             {/* PaidBy & Split Selector */}
-            <div className="grid grid-cols-2 gap-3 text-xs font-bold">
-              {/* Paid By */}
+            <div className="space-y-2.5 text-xs font-bold">
+              {/* Paid By Selection */}
               <div>
                 <label className="block text-slate-400 text-[10px] uppercase mb-1">付款人</label>
-                <div className="grid grid-cols-2 gap-1 bg-slate-800 p-1 rounded-xl">
-                  <button
-                    type="button"
-                    onClick={() => setPaidBy('Jo')}
-                    className={`py-1.5 rounded-lg transition-all cursor-pointer ${
-                      paidBy === 'Jo' ? 'bg-slate-100 text-slate-900' : 'text-slate-400'
-                    }`}
-                  >
-                    Jo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPaidBy('Will')}
-                    className={`py-1.5 rounded-lg transition-all cursor-pointer ${
-                      paidBy === 'Will' ? 'bg-slate-100 text-slate-900' : 'text-slate-400'
-                    }`}
-                  >
-                    Will
-                  </button>
+                <div className="flex items-center space-x-1 bg-slate-800 p-1 rounded-xl overflow-x-auto no-scrollbar">
+                  {members.map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setPaidBy(m)}
+                      className={`flex-1 min-w-[50px] py-1.5 rounded-lg transition-all cursor-pointer text-center whitespace-nowrap ${
+                        paidBy === m ? 'bg-slate-100 text-slate-900 font-extrabold shadow-2xs' : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      {m}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* Split */}
+              {/* Split Selection */}
               <div>
                 <label className="block text-slate-400 text-[10px] uppercase mb-1">分攤對象</label>
-                <div className="grid grid-cols-3 gap-1 bg-slate-800 p-1 rounded-xl">
+                <div className="flex items-center space-x-1 bg-slate-800 p-1 rounded-xl overflow-x-auto no-scrollbar">
                   <button
                     type="button"
-                    onClick={() => setSplit('Both')}
-                    className={`py-1.5 rounded-lg transition-all cursor-pointer ${
-                      split === 'Both' ? 'bg-amber-400 text-slate-950 font-black' : 'text-slate-400'
+                    onClick={() => setSplit('均分')}
+                    className={`flex-1 min-w-[50px] py-1.5 rounded-lg transition-all cursor-pointer text-center whitespace-nowrap ${
+                      split === '均分' || split === 'Both' ? 'bg-amber-400 text-slate-950 font-black' : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
-                    均分
+                    全體均分
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setSplit('Jo')}
-                    className={`py-1.5 rounded-lg transition-all cursor-pointer ${
-                      split === 'Jo' ? 'bg-slate-100 text-slate-900' : 'text-slate-400'
-                    }`}
-                  >
-                    Jo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSplit('Will')}
-                    className={`py-1.5 rounded-lg transition-all cursor-pointer ${
-                      split === 'Will' ? 'bg-slate-100 text-slate-900' : 'text-slate-400'
-                    }`}
-                  >
-                    Will
-                  </button>
+                  {members.map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setSplit(m)}
+                      className={`flex-1 min-w-[50px] py-1.5 rounded-lg transition-all cursor-pointer text-center whitespace-nowrap ${
+                        split === m ? 'bg-slate-100 text-slate-900 font-extrabold shadow-2xs' : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      僅 {m}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
@@ -371,7 +443,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
                           {exp.item}
                         </h4>
                         <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full whitespace-nowrap">
-                          {exp.paidBy || 'Jo'} 付 ({exp.split === 'Both' || exp.split === '均分' ? '均分' : `${exp.split} 分擔`})
+                          {exp.paidBy || members[0]} 付 ({exp.split === 'Both' || exp.split === '均分' ? '全體均分' : `${exp.split} 分擔`})
                         </span>
                       </div>
                       {exp.note && (

@@ -65,4 +65,5 @@ export interface AllTripData {
   tripTitle?: string;     // 旅程名稱（from trips table）
   tripDates?: string;     // 旅程日期顯示（from trips table）
   foreignCurrency?: string; // 外幣代碼，例如 USD / JPY / EUR
+  companions?: string;    // 同行人員，例如 Jo, Will, 特特
 }
