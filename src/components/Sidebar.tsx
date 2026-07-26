@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Calendar, CheckSquare, Package, DollarSign, ShoppingBag, Eye, EyeOff } from 'lucide-react';
+import { Calendar, CheckSquare, Package, DollarSign, ShoppingBag, Eye, EyeOff, Plane } from 'lucide-react';
 
 export type TabType = 'itinerary' | 'todo' | 'packing' | 'expenses' | 'shopping';
 
@@ -10,6 +10,7 @@ interface SidebarProps {
   onSelectTab: (tab: TabType) => void;
   hideVisited: boolean;
   onToggleHideVisited: () => void;
+  tripTitle?: string;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -17,6 +18,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectTab,
   hideVisited,
   onToggleHideVisited,
+  tripTitle = '旅程總覽',
 }) => {
   const tabs = [
     { id: 'itinerary', label: '行程表', icon: Calendar },
@@ -26,16 +28,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'shopping', label: '購物清單', icon: ShoppingBag },
   ] as const;
 
+  // 算乾淨的 Badge 符號：若包含英文則取前兩個英文字母（如 LA），中文則用 Plane 圖示
+  const englishMatches = tripTitle.match(/[A-Za-z]+/g);
+  const badgeText = englishMatches ? englishMatches.join('').substring(0, 2).toUpperCase() : null;
+
   return (
     <aside className="hidden md:flex flex-col w-64 bg-slate-900 text-slate-200 fixed left-0 top-0 bottom-0 z-50 p-4 border-r border-slate-800">
       {/* Brand Header */}
       <div className="flex items-center space-x-3 px-3 py-4 mb-6">
-        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 font-black text-lg flex items-center justify-center shadow-md">
-          LA
+        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 font-black text-sm flex items-center justify-center shadow-md flex-shrink-0 select-none">
+          {badgeText ? badgeText : <Plane className="w-5 h-5 text-slate-950" />}
         </div>
-        <div>
-          <h2 className="font-extrabold text-lg text-white tracking-tight leading-none">
-            LA Trip 2026
+        <div className="min-w-0 flex-1">
+          <h2 className="font-extrabold text-base text-white tracking-tight leading-tight truncate" title={tripTitle}>
+            {tripTitle}
           </h2>
         </div>
       </div>

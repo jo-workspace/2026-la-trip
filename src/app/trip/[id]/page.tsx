@@ -329,6 +329,7 @@ export default function TripPage({ params }: PageProps) {
         onSelectTab={handleTabChange}
         hideVisited={hideVisited}
         onToggleHideVisited={() => setHideVisited(!hideVisited)}
+        tripTitle={tripData.tripTitle || tripConfig.title}
       />
 
       {/* Main Container */}
