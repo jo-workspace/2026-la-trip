@@ -12,6 +12,8 @@ interface PackingModalProps {
   onDelete: (rowIndex: number) => Promise<void>;
 }
 
+const LOCATION_PRESETS = ['🎒 隨身包', '🧳 托運行李', '💼 手提行李', '🧥 穿身上'];
+
 export const PackingModal: React.FC<PackingModalProps> = ({
   isOpen,
   item,
@@ -23,6 +25,7 @@ export const PackingModal: React.FC<PackingModalProps> = ({
   const [person, setPerson] = useState('Jo');
   const [itemName, setItemName] = useState('');
   const [note, setNote] = useState('');
+  const [location, setLocation] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -31,11 +34,13 @@ export const PackingModal: React.FC<PackingModalProps> = ({
       setPerson(item.person || 'Jo');
       setItemName(item.item || '');
       setNote(item.note || '');
+      setLocation(item.location || '');
     } else {
       setCategory('衣物');
       setPerson('Jo');
       setItemName('');
       setNote('');
+      setLocation('');
     }
   }, [item, isOpen]);
 
@@ -53,6 +58,7 @@ export const PackingModal: React.FC<PackingModalProps> = ({
         person: person.trim(),
         item: itemName.trim(),
         note: note.trim(),
+        location: location.trim(),
         isPacked: item?.isPacked || false,
       });
       onClose();
@@ -80,7 +86,7 @@ export const PackingModal: React.FC<PackingModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl space-y-4 animate-scale-up border border-slate-100"
+        className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl space-y-4 animate-scale-up border border-slate-100 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -131,6 +137,37 @@ export const PackingModal: React.FC<PackingModalProps> = ({
               required
               className="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold"
             />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-bold text-slate-500">擺放位置</label>
+              <span className="text-[10px] text-slate-400 font-medium">如：隨身包、托運行李</span>
+            </div>
+            <input
+              type="text"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="輸入或點選下方快捷標籤..."
+              className="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold mb-2"
+            />
+            {/* Quick Presets */}
+            <div className="flex items-center flex-wrap gap-1.5">
+              {LOCATION_PRESETS.map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setLocation(preset)}
+                  className={`text-xs px-2.5 py-1 rounded-lg border transition-all cursor-pointer select-none font-bold ${
+                    location === preset
+                      ? 'bg-slate-900 text-white border-slate-900'
+                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div>

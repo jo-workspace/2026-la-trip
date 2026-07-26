@@ -139,11 +139,12 @@ export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promi
 
     const packing: PackingItem[] = (packingRes.data || []).map((row, idx) => ({
       rowIndex: idx + 2,
-      category: row.Category || row.category || '個人物品',
-      person: row.Person || row.person || row.owner || '全員',
-      item: row.Item || row.item || row.item_name || '',
-      note: row.Note || row.note || '',
-      isPacked: !!(row.Is_Packed ?? row.packed ?? false),
+      category: row.category || row.Category || '個人物品',
+      person: row.person || row.Person || row.owner || '全員',
+      item: row.item || row.Item || row.item_name || '',
+      note: row.note || row.Note || '',
+      location: row.location || row.Location || row.place || row.storage || '',
+      isPacked: !!(row.is_packed ?? row.Is_Packed ?? row.packed ?? false),
     }));
 
     const expenses: ExpenseItem[] = (expenseRes.data || []).map((row, idx) => ({
@@ -425,7 +426,7 @@ export async function toggleTodoStatus(rowIndex: number, isChecked: boolean, tri
 
 /** 行李清單 */
 export async function savePackingData(formData: any, tripId = 'la-2026'): Promise<string> {
-  const { rowIndex, item, category, person, note } = formData;
+  const { rowIndex, item, category, person, note, location } = formData;
   
   const { data: list } = await supabase
     .from('packing_items')
@@ -441,6 +442,7 @@ export async function savePackingData(formData: any, tripId = 'la-2026'): Promis
     person: [person || '全員', 'person', 'Person', 'owner'],
     item: [item || '物品', 'item', 'Item', 'item_name'],
     note: [note || '', 'note', 'Note'],
+    location: [location || '', 'location', 'Location', 'place', 'storage'],
   };
 
   const payload = matchDbPayload(targetRow || sampleRow, map, tripId);

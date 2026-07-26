@@ -24,6 +24,7 @@ export interface PackingItem {
   person: string;
   item: string;
   note?: string;
+  location?: string;
   isPacked: boolean;
 }
 
