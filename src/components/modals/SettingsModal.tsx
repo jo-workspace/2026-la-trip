@@ -196,20 +196,33 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div>
                   <label className="block text-xs font-bold text-slate-600 mb-1">
                     匯率
-                    <span className="text-slate-400 font-normal ml-1">{currency || 'USD'} → TWD</span>
+                    <span className="text-amber-600 font-bold ml-1">
+                      {['JPY', 'KRW', 'VND', 'IDR'].includes((currency || 'USD').toUpperCase())
+                        ? `(1 TWD = ? ${currency})`
+                        : `(1 ${currency} = ? TWD)`}
+                    </span>
                   </label>
                   <div className="relative">
                     <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                     <input
                       type="number"
-                      step="0.01"
+                      step="any"
                       min="0"
                       value={rate}
                       onChange={(e) => setRate(e.target.value)}
-                      placeholder="32.5"
-                      className="w-full bg-slate-50 border border-slate-200 text-sm pl-8 pr-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all"
+                      placeholder={
+                        ['JPY', 'KRW', 'VND', 'IDR'].includes((currency || 'USD').toUpperCase())
+                          ? '例如 5.05'
+                          : '例如 32.5'
+                      }
+                      className="w-full bg-slate-50 border border-slate-200 text-sm pl-8 pr-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-mono font-bold"
                     />
                   </div>
+                  <span className="text-[10px] text-slate-400 mt-1 block">
+                    {['JPY', 'KRW', 'VND', 'IDR'].includes((currency || 'USD').toUpperCase())
+                      ? `如輸入 5.05，代表 $1 台幣可換 $5.05 ${currency}`
+                      : `如輸入 32.5，代表 $1 ${currency} 可換 $32.5 台幣`}
+                  </span>
                 </div>
               </div>
 
