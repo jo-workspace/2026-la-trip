@@ -7,6 +7,7 @@ import { Plus, Trash2, Banknote, DollarSign, Users } from 'lucide-react';
 interface ExpensesTabProps {
   data: ExpenseItem[];
   fxRate: number;
+  foreignCurrency?: string;
   companions?: string;
   onAddExpense: (formData: any) => Promise<void>;
   onDeleteExpense: (rowIndex: number) => Promise<void>;
@@ -22,14 +23,57 @@ const CATEGORY_EMOJIS: Record<string, string> = {
   '❔': '其他',
 };
 
+/** 計算任一單位的換算台幣金額（自動支援正反向匯率，如 1 TWD = 5 JPY 或 1 JPY = 0.2 TWD） */
+export function computeTwdAmount(amt: number, curr: string, fxRate: number, foreignCurrencyCode: string): number {
+  if (!curr || curr === 'TWD') return amt;
+  const numRate = Number(fxRate) || 1;
+  const targetCode = (foreignCurrencyCode || 'USD').toUpperCase();
+  const isReverseCurrency = ['JPY', 'KRW', 'VND', 'IDR'].includes(targetCode);
+
+  if (isReverseCurrency) {
+    if (numRate > 1) {
+      // 使用者輸入 5.0 (代表 1 TWD = 5 JPY)
+      return amt / numRate;
+    } else {
+      // 使用者輸入 0.20 (代表 1 JPY = 0.20 TWD)
+      return amt * numRate;
+    }
+  } else {
+    // USD / EUR / GBP 等強勢貨幣
+    if (numRate < 1) {
+      return amt / numRate;
+    }
+    return amt * numRate;
+  }
+}
+
+/** 格式化外幣匯率提示標籤 */
+export function formatFxRateLabel(fxRate: number, foreignCurrencyCode: string): string {
+  const code = (foreignCurrencyCode || 'USD').toUpperCase();
+  const numRate = Number(fxRate) || 1;
+  const isReverseCurrency = ['JPY', 'KRW', 'VND', 'IDR'].includes(code);
+
+  if (isReverseCurrency) {
+    let twdToForeign = numRate > 1 ? numRate : (1 / numRate);
+    twdToForeign = Number(parseFloat(twdToForeign.toFixed(4)));
+    return `1 TWD ≈ ${twdToForeign} ${code}`;
+  } else {
+    let foreignToTwd = numRate < 1 ? (1 / numRate) : numRate;
+    foreignToTwd = Number(parseFloat(foreignToTwd.toFixed(4)));
+    return `1 ${code} ≈ ${foreignToTwd} TWD`;
+  }
+}
+
 export const ExpensesTab: React.FC<ExpensesTabProps> = ({
   data,
   fxRate = 32.5,
+  foreignCurrency = 'USD',
   companions = 'Jo, Will',
   onAddExpense,
   onDeleteExpense,
 }) => {
-  const displayFxRate = Number(parseFloat(Number(fxRate || 32.5).toFixed(4)));
+  const activeForeignCode = (foreignCurrency || 'USD').toUpperCase();
+  const fxLabel = formatFxRateLabel(fxRate, activeForeignCode);
 
   // 解析同行人員清單
   const companionSet = new Set<string>();
@@ -49,12 +93,17 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
   // Form states
   const [item, setItem] = useState('');
   const [amount, setAmount] = useState('');
-  const [currency, setCurrency] = useState<'USD' | 'TWD'>('USD');
+  const [currency, setCurrency] = useState<string>(activeForeignCode);
   const [category, setCategory] = useState('🍔');
   const [paidBy, setPaidBy] = useState<string>(members[0] || 'Jo');
   const [split, setSplit] = useState<string>('均分');
   const [note, setNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 當外幣設定變更時同步預設外幣代碼
+  useEffect(() => {
+    setCurrency(activeForeignCode);
+  }, [activeForeignCode]);
 
   // 當同行人員改變時，若目前選擇的付款人不符，重置為第一個
   useEffect(() => {
@@ -77,7 +126,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
 
   data.forEach((exp) => {
     let amt = typeof exp.amount === 'number' ? exp.amount : parseFloat(exp.amount) || 0;
-    let amtTWD = exp.currency === 'USD' ? amt * fxRate : amt;
+    let amtTWD = computeTwdAmount(amt, exp.currency, fxRate, activeForeignCode);
 
     // 處理系統結清對沖紀錄
     if (exp.item && exp.item.includes('系統結清')) {
@@ -203,7 +252,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
   };
 
   const parsedAmount = parseFloat(amount) || 0;
-  const liveTwdEst = currency === 'USD' ? Math.round(parsedAmount * fxRate) : parsedAmount;
+  const liveTwdEst = Math.round(computeTwdAmount(parsedAmount, currency, fxRate, activeForeignCode));
 
   return (
     <div className="space-y-6 pb-20">
@@ -214,7 +263,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
           <div className="bg-gradient-to-br from-slate-800 to-slate-900 text-white p-5 rounded-2xl shadow-sm border border-slate-700/50 text-center space-y-2">
             <div className="flex items-center justify-center space-x-1.5 text-xs font-bold uppercase tracking-wider text-slate-400">
               <Users className="w-3.5 h-3.5" />
-              <span>分帳結算 (同行 {members.length} 人 · 匯率 1:{displayFxRate})</span>
+              <span>分帳結算 (同行 {members.length} 人 · {fxLabel})</span>
             </div>
 
             <div className="space-y-1">
@@ -274,7 +323,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
                 <DollarSign className="w-4 h-4" />
                 <span>新增記帳項目</span>
               </h3>
-              <span className="text-[10px] text-slate-400 font-mono">1 USD ≈ {displayFxRate} TWD</span>
+              <span className="text-[10px] text-slate-400 font-mono">{fxLabel}</span>
             </div>
 
             {/* Item Title & Amount */}
@@ -295,11 +344,11 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="金額"
                   required
-                  className="w-full bg-slate-800 text-white text-sm font-bold pl-3 pr-11 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-amber-400 transition-all border border-slate-700 placeholder:text-slate-500 font-mono"
+                  className="w-full bg-slate-800 text-white text-sm font-bold pl-3 pr-12 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-amber-400 transition-all border border-slate-700 placeholder:text-slate-500 font-mono"
                 />
                 <button
                   type="button"
-                  onClick={() => setCurrency(currency === 'USD' ? 'TWD' : 'USD')}
+                  onClick={() => setCurrency(currency === activeForeignCode ? 'TWD' : activeForeignCode)}
                   className="absolute right-1 text-[10px] font-black bg-amber-400 text-slate-950 px-2 py-1 rounded-lg cursor-pointer select-none active:scale-95 transition-all"
                 >
                   {currency}
@@ -308,7 +357,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
             </div>
 
             {/* Live FX Calculation Preview */}
-            {parsedAmount > 0 && (
+            {parsedAmount > 0 && currency !== 'TWD' && (
               <div className="text-[11px] font-bold text-amber-300 px-1 font-mono">
                 ≈ 約合 TWD ${liveTwdEst.toLocaleString()}
               </div>
@@ -422,7 +471,8 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
             {data.map((exp) => {
               const isSettlement = exp.item && exp.item.includes('系統結清');
               const amt = typeof exp.amount === 'number' ? exp.amount : parseFloat(exp.amount) || 0;
-              const amtTWD = exp.currency === 'USD' ? Math.round(amt * fxRate) : amt;
+              const expCurr = (exp.currency || activeForeignCode).toUpperCase();
+              const amtTWD = Math.round(computeTwdAmount(amt, expCurr, fxRate, activeForeignCode));
 
               return (
                 <div
@@ -456,9 +506,9 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
                   <div className="flex items-center space-x-3 flex-shrink-0">
                     <div className="text-right">
                       <div className="text-sm font-black font-mono text-slate-900">
-                        {exp.currency === 'USD' ? `$${amt} USD` : `$${amt} TWD`}
+                        ${amt.toLocaleString()} {expCurr}
                       </div>
-                      {exp.currency === 'USD' && (
+                      {expCurr !== 'TWD' && (
                         <div className="text-[10px] font-bold font-mono text-slate-400">
                           ≈ ${amtTWD.toLocaleString()} TWD
                         </div>

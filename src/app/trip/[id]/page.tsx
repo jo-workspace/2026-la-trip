@@ -408,6 +408,7 @@ export default function TripPage({ params }: PageProps) {
                 <ExpensesTab
                   data={tripData.expenses}
                   fxRate={tripData.fxRate}
+                  foreignCurrency={tripData.foreignCurrency || 'USD'}
                   companions={tripData.companions}
                   onAddExpense={handleAddExpense}
                   onDeleteExpense={handleDeleteExpense}
