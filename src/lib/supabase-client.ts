@@ -405,18 +405,12 @@ export async function toggleTodoStatus(rowIndex: number, isChecked: boolean, tri
 export async function savePackingData(formData: any, tripId = 'la-2026'): Promise<string> {
   const { rowIndex, item, category, person, note } = formData;
   
-  const primaryPayload: Record<string, any> = {
+  const payload: Record<string, any> = {
     trip_id: tripId,
     category: category || '個人物品',
     person: person || '全員',
     item: item || '物品',
     note: note || '',
-  };
-
-  const fallbackPayload: Record<string, any> = {
-    ...primaryPayload,
-    item_name: item || '物品',
-    owner: person || '全員',
   };
 
   if (rowIndex && rowIndex >= 2) {
@@ -428,21 +422,13 @@ export async function savePackingData(formData: any, tripId = 'la-2026'): Promis
 
     if (data && data[rowIndex - 2]) {
       const targetId = data[rowIndex - 2].id;
-      let { error } = await supabase.from('packing_items').update(primaryPayload).eq('id', targetId);
-      if (error) {
-        const res = await supabase.from('packing_items').update(fallbackPayload).eq('id', targetId);
-        error = res.error;
-      }
+      const { error } = await supabase.from('packing_items').update(payload).eq('id', targetId);
       if (error) throw new Error(`更新行李失敗: ${error.message}`);
       return '更新成功';
     }
   }
 
-  let { error } = await supabase.from('packing_items').insert({ ...primaryPayload, is_packed: false });
-  if (error) {
-    const res = await supabase.from('packing_items').insert({ ...fallbackPayload, packed: false });
-    error = res.error;
-  }
+  const { error } = await supabase.from('packing_items').insert({ ...payload, is_packed: false });
   if (error) throw new Error(`儲存行李失敗: ${error.message}`);
   return '儲存成功';
 }

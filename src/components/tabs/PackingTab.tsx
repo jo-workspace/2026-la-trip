@@ -155,7 +155,7 @@ export const PackingTab: React.FC<PackingTabProps> = ({
                       <input
                         type="checkbox"
                         checked={item.isPacked}
-                        onChange={(e) => onTogglePacking(item.rowIndex, !e.target.checked)}
+                        onChange={() => onTogglePacking(item.rowIndex, item.isPacked)}
                         className="w-5 h-5 rounded border-slate-300 text-slate-900 focus:ring-slate-900 cursor-pointer flex-shrink-0 transition-transform active:scale-90"
                       />
                       <div className="min-w-0 flex-1">
