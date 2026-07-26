@@ -296,13 +296,13 @@ export async function updateTripSettings(
   }
 }
 
-/** 行程新增/儲存 */
+/** 行程新增/編輯/儲存 */
 export async function saveItineraryData(formData: any, tripId = 'la-2026'): Promise<string> {
-  const { day, time, type, title, content, links } = formData;
+  const { rowIndex, day, time, type, title, content, links } = formData;
   const dayMatch = day ? day.match(/\d+/) : null;
   const dayNumber = dayMatch ? parseInt(dayMatch[0], 10) : 1;
 
-  const { error } = await supabase.from('itinerary_items').insert({
+  const payload = {
     trip_id: tripId,
     day_number: dayNumber,
     time: time || '',
@@ -312,15 +312,32 @@ export async function saveItineraryData(formData: any, tripId = 'la-2026'): Prom
     location: links || '',
     links: links || '',
     url: links || '',
-  });
+  };
 
+  if (rowIndex && rowIndex >= 2) {
+    const { data } = await supabase
+      .from('itinerary_items')
+      .select('id')
+      .eq('trip_id', tripId)
+      .order('created_at', { ascending: true });
+
+    if (data && data[rowIndex - 2]) {
+      const { error } = await supabase
+        .from('itinerary_items')
+        .update(payload)
+        .eq('id', data[rowIndex - 2].id);
+      if (error) throw new Error(`更新行程失敗: ${error.message}`);
+      return '更新成功';
+    }
+  }
+
+  const { error } = await supabase.from('itinerary_items').insert(payload);
   if (error) throw new Error(`儲存行程失敗: ${error.message}`);
   return '儲存成功';
 }
 
 export async function deleteItineraryData(rowIndex: number, tripId = 'la-2026'): Promise<string> {
-  // 按建立時間查詢並刪除對應順序的項目
-  const { data } = await supabase.from('itinerary_items').select('id').eq('trip_id', tripId).order('day_number', { ascending: true });
+  const { data } = await supabase.from('itinerary_items').select('id').eq('trip_id', tripId).order('created_at', { ascending: true });
   if (data && data[rowIndex - 2]) {
     await supabase.from('itinerary_items').delete().eq('id', data[rowIndex - 2].id);
   }
@@ -328,19 +345,43 @@ export async function deleteItineraryData(rowIndex: number, tripId = 'la-2026'):
 }
 
 export async function toggleVisitedStatus(rowIndex: number, isChecked: boolean, tripId = 'la-2026'): Promise<string> {
+  const { data } = await supabase.from('itinerary_items').select('id').eq('trip_id', tripId).order('created_at', { ascending: true });
+  if (data && data[rowIndex - 2]) {
+    await supabase.from('itinerary_items').update({ is_visited: isChecked }).eq('id', data[rowIndex - 2].id);
+  }
   return '已更新';
 }
 
 /** 待辦事項 */
 export async function saveTodoData(formData: any, tripId = 'la-2026'): Promise<string> {
-  const { task, category, note } = formData;
-  const { error } = await supabase.from('todo_items').insert({
+  const { rowIndex, task, category, note } = formData;
+  const payload = {
     trip_id: tripId,
     category: category || '待辦',
     task: task || '新待辦事項',
+    task_name: task || '新待辦事項',
     note: note || '',
-    completed: false,
-  });
+    due_date: note || '',
+  };
+
+  if (rowIndex && rowIndex >= 2) {
+    const { data } = await supabase
+      .from('todo_items')
+      .select('id')
+      .eq('trip_id', tripId)
+      .order('created_at', { ascending: true });
+
+    if (data && data[rowIndex - 2]) {
+      const { error } = await supabase
+        .from('todo_items')
+        .update(payload)
+        .eq('id', data[rowIndex - 2].id);
+      if (error) throw new Error(`更新待辦失敗: ${error.message}`);
+      return '更新成功';
+    }
+  }
+
+  const { error } = await supabase.from('todo_items').insert({ ...payload, completed: false });
   if (error) throw new Error(`儲存待辦失敗: ${error.message}`);
   return '儲存成功';
 }
@@ -363,14 +404,35 @@ export async function toggleTodoStatus(rowIndex: number, isChecked: boolean, tri
 
 /** 行李清單 */
 export async function savePackingData(formData: any, tripId = 'la-2026'): Promise<string> {
-  const { item, category, person } = formData;
-  const { error } = await supabase.from('packing_items').insert({
+  const { rowIndex, item, category, person, note } = formData;
+  const payload = {
     trip_id: tripId,
+    item: item || '物品',
     item_name: item || '物品',
     category: category || '個人物品',
+    person: person || '全員',
     owner: person || '全員',
-    packed: false,
-  });
+    note: note || '',
+  };
+
+  if (rowIndex && rowIndex >= 2) {
+    const { data } = await supabase
+      .from('packing_items')
+      .select('id')
+      .eq('trip_id', tripId)
+      .order('created_at', { ascending: true });
+
+    if (data && data[rowIndex - 2]) {
+      const { error } = await supabase
+        .from('packing_items')
+        .update(payload)
+        .eq('id', data[rowIndex - 2].id);
+      if (error) throw new Error(`更新行李失敗: ${error.message}`);
+      return '更新成功';
+    }
+  }
+
+  const { error } = await supabase.from('packing_items').insert({ ...payload, packed: false });
   if (error) throw new Error(`儲存行李失敗: ${error.message}`);
   return '儲存成功';
 }
@@ -393,19 +455,39 @@ export async function togglePackingStatus(rowIndex: number, isChecked: boolean, 
 
 /** 記帳 */
 export async function addExpenseData(formData: any, tripId = 'la-2026'): Promise<string> {
-  const { item, category, amount, currency, paidBy, split, note } = formData;
-
-  const { error } = await supabase.from('expense_items').insert({
+  const { rowIndex, item, category, amount, currency, paidBy, split, note } = formData;
+  const payload = {
     trip_id: tripId,
     title: item || '消費',
+    item_name: item || '消費',
     category: category || '餐飲',
     amount: Number(amount || 0),
     currency: currency || 'USD',
     paid_by: paidBy || 'Jo',
+    payer: paidBy || 'Jo',
     split: split || 'Both',
     note: note || '',
-  });
+    notes: note || '',
+  };
 
+  if (rowIndex && rowIndex >= 2) {
+    const { data } = await supabase
+      .from('expense_items')
+      .select('id')
+      .eq('trip_id', tripId)
+      .order('created_at', { ascending: true });
+
+    if (data && data[rowIndex - 2]) {
+      const { error } = await supabase
+        .from('expense_items')
+        .update(payload)
+        .eq('id', data[rowIndex - 2].id);
+      if (error) throw new Error(`更新記帳失敗: ${error.message}`);
+      return '更新成功';
+    }
+  }
+
+  const { error } = await supabase.from('expense_items').insert(payload);
   if (error) throw new Error(`記帳失敗: ${error.message}`);
   return '記帳成功';
 }
@@ -420,14 +502,33 @@ export async function deleteExpenseData(rowIndex: number, tripId = 'la-2026'): P
 
 /** 購物清單 */
 export async function saveShoppingData(formData: any, tripId = 'la-2026'): Promise<string> {
-  const { item, store, note } = formData;
-  const { error } = await supabase.from('shopping_items').insert({
+  const { rowIndex, item, store, note } = formData;
+  const payload = {
     trip_id: tripId,
+    item: item || '購物品',
     item_name: item || '購物品',
     store: store || '一般店家',
     note: note || '',
-    bought: false,
-  });
+  };
+
+  if (rowIndex && rowIndex >= 2) {
+    const { data } = await supabase
+      .from('shopping_items')
+      .select('id')
+      .eq('trip_id', tripId)
+      .order('created_at', { ascending: true });
+
+    if (data && data[rowIndex - 2]) {
+      const { error } = await supabase
+        .from('shopping_items')
+        .update(payload)
+        .eq('id', data[rowIndex - 2].id);
+      if (error) throw new Error(`更新購物清單失敗: ${error.message}`);
+      return '更新成功';
+    }
+  }
+
+  const { error } = await supabase.from('shopping_items').insert({ ...payload, bought: false });
   if (error) throw new Error(`儲存購物清單失敗: ${error.message}`);
   return '儲存成功';
 }
