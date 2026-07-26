@@ -162,16 +162,15 @@ export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promi
 
     const shopping: ShoppingItem[] = (shoppingRes.data || []).map((row, idx) => ({
       rowIndex: idx + 2,
-      store: row.Store || row.store || '一般店家',
-      // 為誰買：原始欄位叫 "For Whom"（有空格），也支援 For_Whom
-      forWhom: row['For Whom'] || row.For_Whom || row.forWhom || row.for_whom || '自己',
-      item: row.Item || row.item || row.item_name || '',
-      quantity: row.Quantity || row.quantity || '1',
-      image: row.Image || row.image || '',
-      url: row.URL || row.url || row.link || '',
-      note: row.Note || row.note || '',
-      // 完成狀態：原始欄位叫 "Done"，也支援 Is_Done/bought
-      isDone: !!(row.Done ?? row.Is_Done ?? row.is_done ?? row.bought ?? false),
+      store: row.store || row.Store || '一般店家',
+      // 為誰買：對應 for_whom / For Whom
+      forWhom: row.for_whom || row['For Whom'] || row.For_Whom || row.forWhom || '自己',
+      item: row.item_name || row.item || row.Item || '',
+      quantity: row.quantity || row.Quantity || '1',
+      image: row.image || row.Image || '',
+      note: row.note || row.Note || '',
+      // 完成狀態：對應 bought / Done / is_done
+      isDone: !!(row.bought ?? row.Done ?? row.Is_Done ?? row.is_done ?? false),
     }));
 
     // settingsRes / tripRes 現在回傳 array（.limit(1)），取第一筆
@@ -502,12 +501,15 @@ export async function deleteExpenseData(rowIndex: number, tripId = 'la-2026'): P
 
 /** 購物清單 */
 export async function saveShoppingData(formData: any, tripId = 'la-2026'): Promise<string> {
-  const { rowIndex, item, store, note } = formData;
+  const { rowIndex, item, store, forWhom, quantity, note, image } = formData;
   const payload = {
     trip_id: tripId,
-    item: item || '購物品',
     item_name: item || '購物品',
+    item: item || '購物品',
     store: store || '一般店家',
+    for_whom: forWhom || '自己',
+    quantity: quantity || '1',
+    image: image || '',
     note: note || '',
   };
 
