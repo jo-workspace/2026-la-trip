@@ -75,20 +75,27 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
   const activeForeignCode = (foreignCurrency || 'USD').toUpperCase();
   const fxLabel = formatFxRateLabel(fxRate, activeForeignCode);
 
-  // 解析同行人員清單
+  // 解析同行人員清單（排除公用與分帳關鍵字）
   const companionSet = new Set<string>();
+  const EXCLUDED_KEYWORDS = ['公用', '公用錢包', '均分', 'Both', 'ALL', '全體均分', '僅公用'];
+
   if (companions) {
     companions.split(/[\n,，]+/).forEach((p) => {
       const trimmed = p.trim();
-      if (trimmed) companionSet.add(trimmed);
+      if (trimmed && !EXCLUDED_KEYWORDS.includes(trimmed)) {
+        companionSet.add(trimmed);
+      }
     });
   }
-  // 如果舊資料有非清單內的人員，自動補充進去
+  // 如果舊資料有非清單內的人員，自動補充進去（排除公用與關鍵字）
   data.forEach((exp) => {
-    if (exp.paidBy && exp.paidBy !== '均分' && exp.paidBy !== 'Both') companionSet.add(exp.paidBy.trim());
-    if (exp.split && exp.split !== '均分' && exp.split !== 'Both' && exp.split !== 'ALL') companionSet.add(exp.split.trim());
+    const p = (exp.paidBy || '').trim();
+    const s = (exp.split || '').trim();
+    if (p && !EXCLUDED_KEYWORDS.includes(p)) companionSet.add(p);
+    if (s && !EXCLUDED_KEYWORDS.includes(s)) companionSet.add(s);
   });
   const members = Array.from(companionSet).length > 0 ? Array.from(companionSet) : ['Jo', 'Will'];
+  const paidByOptions = [...members, '公用'];
 
   // Form states
   const [item, setItem] = useState('');
@@ -107,7 +114,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
 
   // 當同行人員改變時，若目前選擇的付款人不符，重置為第一個
   useEffect(() => {
-    if (!members.includes(paidBy)) {
+    if (!paidByOptions.includes(paidBy)) {
       setPaidBy(members[0] || 'Jo');
     }
   }, [companions]);
@@ -141,17 +148,17 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
 
     totalTWD += amtTWD;
 
-    // 累計付款金額
+    // 累計付款金額（如果付款人是「公用」，代表由公用金支付，不計入個人墊付款）
     const payer = exp.paidBy ? exp.paidBy.trim() : members[0];
     if (paidTWD[payer] !== undefined) {
       paidTWD[payer] += amtTWD;
-    } else {
-      paidTWD[payer] = amtTWD;
     }
 
-    // 累計應分攤金額
+    // 累計應分攤金額（「均分」、「Both」、「ALL」、「公用」、「僅公用」、「全體均分」均代表全體真實成員均分）
     const splitTarget = exp.split ? exp.split.trim() : '均分';
-    if (splitTarget === 'Both' || splitTarget === '均分' || splitTarget === 'ALL') {
+    const isShared = EXCLUDED_KEYWORDS.includes(splitTarget);
+
+    if (isShared) {
       const sharePerPerson = amtTWD / members.length;
       members.forEach((m) => {
         shareTWD[m] = (shareTWD[m] || 0) + sharePerPerson;
@@ -389,7 +396,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
               <div>
                 <label className="block text-slate-400 text-[10px] uppercase mb-1">付款人</label>
                 <div className="flex items-center space-x-1 bg-slate-800 p-1 rounded-xl overflow-x-auto no-scrollbar">
-                  {members.map((m) => (
+                  {paidByOptions.map((m) => (
                     <button
                       key={m}
                       type="button"
@@ -412,7 +419,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
                     type="button"
                     onClick={() => setSplit('均分')}
                     className={`flex-1 min-w-[50px] py-1.5 rounded-lg transition-all cursor-pointer text-center whitespace-nowrap ${
-                      split === '均分' || split === 'Both' ? 'bg-amber-400 text-slate-950 font-black' : 'text-slate-400 hover:text-slate-200'
+                      split === '均分' || split === 'Both' || split === '公用' ? 'bg-amber-400 text-slate-950 font-black' : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
                     全體均分
