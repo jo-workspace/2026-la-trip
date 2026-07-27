@@ -294,7 +294,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
                 className="mt-2 px-4 py-1.5 text-xs font-bold bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl transition-all active:scale-95 cursor-pointer shadow-xs inline-flex items-center space-x-1"
               >
                 <Banknote className="w-3.5 h-3.5" />
-                <span>一鍵點擊結清首筆</span>
+                <span>一鍵結清</span>
               </button>
             )}
           </div>

@@ -23,8 +23,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const tabs = [
     { id: 'itinerary', label: '行程表', icon: Calendar },
     { id: 'todo', label: '待辦事項', icon: CheckSquare },
-    { id: 'packing', label: '行李打包', icon: Package },
-    { id: 'expenses', label: '記帳與分帳', icon: DollarSign },
+    { id: 'packing', label: '打包清單', icon: Package },
+    { id: 'expenses', label: '記帳分帳', icon: DollarSign },
     { id: 'shopping', label: '購物清單', icon: ShoppingBag },
   ] as const;
 
