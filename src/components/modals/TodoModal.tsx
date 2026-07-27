@@ -19,18 +19,18 @@ export const TodoModal: React.FC<TodoModalProps> = ({
   onSave,
   onDelete,
 }) => {
-  const [category, setCategory] = useState('行前準備');
+  const [category, setCategory] = useState('Phase 4: Pre-Travel');
   const [task, setTask] = useState('');
   const [note, setNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (item) {
-      setCategory(item.category || '行前準備');
+      setCategory(item.category || 'Phase 4: Pre-Travel');
       setTask(item.task || '');
       setNote(item.note || '');
     } else {
-      setCategory('行前準備');
+      setCategory('Phase 4: Pre-Travel');
       setTask('');
       setNote('');
     }
@@ -99,10 +99,10 @@ export const TodoModal: React.FC<TodoModalProps> = ({
               onChange={(e) => setCategory(e.target.value)}
               className="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold"
             >
-              <option value="行前準備">📌 行前準備</option>
-              <option value="證件機票">🛫 證件機票</option>
-              <option value="預約門票">🎟️ 預約門票</option>
-              <option value="租車交通">🚗 租車交通</option>
+              <option value="Phase 1: 即刻">Phase 1: 即刻</option>
+              <option value="Phase 2: 旅宿交通">Phase 2: 旅宿交通</option>
+              <option value="Phase 3: 7 月">Phase 3: 7 月</option>
+              <option value="Phase 4: Pre-Travel">Phase 4: Pre-Travel</option>
               <option value="其他">備忘</option>
             </select>
           </div>
