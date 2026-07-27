@@ -190,11 +190,10 @@ export const ItineraryTab: React.FC<ItineraryTabProps> = ({
                                 href={item.links}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center space-x-1 text-[11px] font-bold text-sky-600 bg-sky-50 border border-sky-200/60 hover:bg-sky-100/80 px-1.5 py-0.5 rounded-md transition-all active:scale-95 ml-1 select-none"
-                                title="開啟連結 / 地圖"
+                                className="inline-flex items-center text-sky-600 hover:text-sky-700 transition-transform active:scale-95 ml-0.5"
+                                title="開啟 Google 地圖"
                               >
-                                <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                                <span>地圖</span>
+                                <MapPin className="w-4 h-4" />
                               </a>
                             )}
                           </div>
