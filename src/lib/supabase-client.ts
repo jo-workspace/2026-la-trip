@@ -140,11 +140,11 @@ export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promi
     const packing: PackingItem[] = (packingRes.data || []).map((row, idx) => ({
       rowIndex: idx + 2,
       category: row.category || row.Category || '個人物品',
-      person: row.person || row.Person || row.owner || '全員',
-      item: row.item || row.Item || row.item_name || '',
+      person: row.owner || row.person || row.Person || '全員',
+      item: row.item_name || row.item || row.Item || '',
       note: row.note || row.Note || '',
       location: row.location || row.Location || row.place || row.storage || '',
-      isPacked: !!(row.is_packed ?? row.Is_Packed ?? row.packed ?? false),
+      isPacked: !!(row.packed ?? row.is_packed ?? row.Is_Packed ?? false),
     }));
 
     const expenses: ExpenseItem[] = (expenseRes.data || []).map((row, idx) => ({
@@ -455,8 +455,8 @@ export async function savePackingData(formData: any, tripId = 'la-2026'): Promis
 
   const map: Record<string, [any, ...string[]]> = {
     category: [category || '個人物品', 'category', 'Category'],
-    person: [person || '全員', 'person', 'Person', 'owner'],
-    item: [item || '物品', 'item', 'Item', 'item_name'],
+    person: [person || '全員', 'owner', 'person', 'Person'],
+    item: [item || '物品', 'item_name', 'item', 'Item'],
     note: [note || '', 'note', 'Note'],
     location: [location || '', 'location', 'Location', 'place', 'storage'],
   };
@@ -469,7 +469,7 @@ export async function savePackingData(formData: any, tripId = 'la-2026'): Promis
     return '更新成功';
   }
 
-  const statusKey = sampleRow && Object.keys(sampleRow).find((k) => ['is_packed', 'packed', 'Is_Packed', 'is_done'].includes(k)) || 'is_packed';
+  const statusKey = sampleRow && Object.keys(sampleRow).find((k) => ['packed', 'is_packed', 'Is_Packed', 'is_done'].includes(k)) || 'packed';
   const { error } = await supabase.from('packing_items').insert({ ...payload, [statusKey]: false });
   if (error) throw new Error(`儲存行李失敗: ${error.message}`);
   return '儲存成功';
@@ -487,7 +487,7 @@ export async function togglePackingStatus(rowIndex: number, isChecked: boolean, 
   const { data } = await supabase.from('packing_items').select('*').eq('trip_id', tripId).order('created_at', { ascending: true });
   if (data && data[rowIndex - 2]) {
     const row = data[rowIndex - 2];
-    const key = Object.keys(row).find((k) => ['is_packed', 'packed', 'Is_Packed', 'is_done'].includes(k)) || 'is_packed';
+    const key = Object.keys(row).find((k) => ['packed', 'is_packed', 'Is_Packed', 'is_done'].includes(k)) || 'packed';
     await supabase.from('packing_items').update({ [key]: isChecked }).eq('id', row.id);
   }
   return '已更新';
