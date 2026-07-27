@@ -12,7 +12,7 @@ interface PackingModalProps {
   onDelete: (rowIndex: number) => Promise<void>;
 }
 
-const LOCATION_PRESETS = ['👛 隨身', '🧳 托運', '🎒 手提', '👕 穿著'];
+const LOCATION_PRESETS = ['隨身', '托運', '手提', '穿著'];
 
 export const PackingModal: React.FC<PackingModalProps> = ({
   isOpen,
