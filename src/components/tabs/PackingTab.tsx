@@ -37,6 +37,10 @@ export const PackingTab: React.FC<PackingTabProps> = ({
   const [selectedPerson, setSelectedPerson] = useState<string>('全部');
   const [selectedLocation, setSelectedLocation] = useState<string>('全部');
 
+  // Custom sorting order for Persons and Locations
+  const PREFERRED_PERSON_ORDER = ['Jo', 'Will', '公用', '特特'];
+  const PREFERRED_LOCATION_ORDER = ['託運', '托運', '手提', '隨身', '穿著'];
+
   // Extract unique persons
   const personSet = new Set<string>();
   data.forEach((item) => {
@@ -47,7 +51,14 @@ export const PackingTab: React.FC<PackingTabProps> = ({
       });
     }
   });
-  const personList = ['全部', ...Array.from(personSet)];
+  const personList = ['全部', ...Array.from(personSet).sort((a, b) => {
+    const idxA = PREFERRED_PERSON_ORDER.indexOf(a);
+    const idxB = PREFERRED_PERSON_ORDER.indexOf(b);
+    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+    if (idxA !== -1) return -1;
+    if (idxB !== -1) return 1;
+    return a.localeCompare(b, 'zh-Hant');
+  })];
 
   // Extract unique locations
   const locationSet = new Set<string>();
@@ -57,7 +68,14 @@ export const PackingTab: React.FC<PackingTabProps> = ({
       if (trimmed) locationSet.add(trimmed);
     }
   });
-  const locationList = ['全部', ...Array.from(locationSet)];
+  const locationList = ['全部', ...Array.from(locationSet).sort((a, b) => {
+    const idxA = PREFERRED_LOCATION_ORDER.indexOf(a);
+    const idxB = PREFERRED_LOCATION_ORDER.indexOf(b);
+    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+    if (idxA !== -1) return -1;
+    if (idxB !== -1) return 1;
+    return a.localeCompare(b, 'zh-Hant');
+  })];
 
   // Group items by category after filters
   const groupedByCategory: Record<string, PackingItem[]> = {};
