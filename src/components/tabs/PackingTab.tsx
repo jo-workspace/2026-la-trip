@@ -188,8 +188,8 @@ export const PackingTab: React.FC<PackingTabProps> = ({
                 )}
               </div>
 
-              {/* Items List - Borderless Clean Layout */}
-              <div className="space-y-0.5">
+              {/* Items List - Borderless Clean Grid Layout (1 col mobile, 2 col tablet, 3 col desktop) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1">
                 {items.map((item) => {
                   const pTokens = item.person ? item.person.split(/[\n,，]+/).map((t) => t.trim()) : [];
                   return (
