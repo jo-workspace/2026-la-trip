@@ -328,34 +328,46 @@ export async function saveItineraryData(formData: any, tripId = 'la-2026'): Prom
   const dayMatch = day ? day.match(/\d+/) : null;
   const dayNumber = dayMatch ? parseInt(dayMatch[0], 10) : 1;
 
-  const { data: list } = await supabase
+  const { data: list, error: fetchErr } = await supabase
     .from('itinerary_items')
     .select('*')
     .eq('trip_id', tripId)
     .order('created_at', { ascending: true });
 
+  if (fetchErr) {
+    console.warn('itinerary_items fetch error:', fetchErr);
+  }
+
   const sampleRow = list?.[0] || null;
   const targetRow = (rowIndex && rowIndex >= 2 && list) ? list[rowIndex - 2] : null;
 
+  // 優先採用標準 Supabase 欄位名稱 (day_number, url, note, category, title, time)
   const map: Record<string, [any, ...string[]]> = {
-    dayNumber: [dayNumber, 'day_number', 'day', 'Day'],
+    day_number: [dayNumber, 'day_number', 'day', 'Day', 'dayNumber'],
     time: [time || '', 'time', 'Time'],
     category: [type || '觀光', 'category', 'Category', 'type', 'Type'],
     title: [title || '未命名行程', 'title', 'Title'],
     note: [content || '', 'note', 'Note', 'content', 'Content'],
-    location: [links || '', 'location', 'links', 'Links', 'url', 'URL'],
+    url: [links || '', 'url', 'URL', 'links', 'Links', 'location'],
   };
 
   const payload = matchDbPayload(targetRow || sampleRow, map, tripId);
 
   if (targetRow) {
     const { error } = await supabase.from('itinerary_items').update(payload).eq('id', targetRow.id);
-    if (error) throw new Error(`更新行程失敗: ${error.message}`);
+    if (error) {
+      console.error('更新行程失敗 Supabase Error:', error);
+      throw new Error(`更新行程失敗: ${error.message}`);
+    }
     return '更新成功';
   }
 
-  const { error } = await supabase.from('itinerary_items').insert({ ...payload, is_visited: false });
-  if (error) throw new Error(`儲存行程失敗: ${error.message}`);
+  const statusKey = sampleRow && Object.keys(sampleRow).find((k) => ['is_visited', 'Is_Visited', 'visited'].includes(k)) || 'is_visited';
+  const { error } = await supabase.from('itinerary_items').insert({ ...payload, [statusKey]: false });
+  if (error) {
+    console.error('儲存行程失敗 Supabase Error:', error);
+    throw new Error(`儲存行程失敗: ${error.message}`);
+  }
   return '儲存成功';
 }
 
