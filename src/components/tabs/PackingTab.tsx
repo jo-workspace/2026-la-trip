@@ -25,6 +25,9 @@ const PACKING_EMOJIS: Record<string, string> = {
   文件: '🪪',
 };
 
+const stripEmoji = (str: string) =>
+  str.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|\p{Extended_Pictographic}/gu, '').trim();
+
 export const PackingTab: React.FC<PackingTabProps> = ({
   data,
   hidePacked,
@@ -50,7 +53,7 @@ export const PackingTab: React.FC<PackingTabProps> = ({
   const locationSet = new Set<string>();
   data.forEach((item) => {
     if (item.location) {
-      const trimmed = item.location.trim();
+      const trimmed = stripEmoji(item.location);
       if (trimmed) locationSet.add(trimmed);
     }
   });
@@ -69,7 +72,8 @@ export const PackingTab: React.FC<PackingTabProps> = ({
 
     // Location filter
     if (selectedLocation !== '全部') {
-      if ((item.location || '').trim() !== selectedLocation) return;
+      const itemLoc = item.location ? stripEmoji(item.location) : '';
+      if (itemLoc !== selectedLocation) return;
     }
 
     const cat = item.category || '其他';
@@ -83,8 +87,8 @@ export const PackingTab: React.FC<PackingTabProps> = ({
 
   return (
     <div className="space-y-4 pb-20">
-      {/* Top Controls Bar: Person & Location Filters + Inline Add Button */}
-      <div className="p-1 md:p-2 flex items-center justify-between gap-3 flex-wrap">
+      {/* Top Controls Bar: Subtle Soft Background Container */}
+      <div className="bg-slate-50/70 p-2.5 rounded-2xl border border-slate-100/80 flex items-center justify-between gap-3 flex-wrap">
         {/* Person & Location Filter Chips (Wrap naturally on mobile, no horizontal scroll) */}
         <div className="flex items-center gap-3 flex-wrap flex-1 min-w-0">
           {/* Person Filter */}
@@ -100,7 +104,7 @@ export const PackingTab: React.FC<PackingTabProps> = ({
                     className={`px-2.5 py-1 text-xs font-extrabold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
                       isSelected
                         ? 'bg-slate-900 text-white shadow-2xs'
-                        : 'bg-slate-100/80 text-slate-600 hover:bg-slate-200/80'
+                        : 'bg-white/80 text-slate-600 border border-slate-200/50 hover:bg-slate-100'
                     }`}
                   >
                     {person}
@@ -124,7 +128,7 @@ export const PackingTab: React.FC<PackingTabProps> = ({
                       className={`px-2.5 py-1 text-xs font-extrabold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
                         isSelected
                           ? 'bg-slate-900 text-white shadow-2xs'
-                          : 'bg-slate-100/80 text-slate-600 hover:bg-slate-200/80'
+                          : 'bg-white/80 text-slate-600 border border-slate-200/50 hover:bg-slate-100'
                       }`}
                     >
                       {loc}
@@ -146,7 +150,7 @@ export const PackingTab: React.FC<PackingTabProps> = ({
         </button>
       </div>
 
-      {/* Main Content Layout: Frameless Clean Items List */}
+      {/* Main Content Layout: Frameless High-Density Clean Items List */}
       <div className="w-full p-2 md:p-4 space-y-6">
         {categories.length === 0 && (
           <div className="text-center py-16 text-slate-400 text-sm">
@@ -192,10 +196,12 @@ export const PackingTab: React.FC<PackingTabProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1">
                 {items.map((item) => {
                   const pTokens = item.person ? item.person.split(/[\n,，]+/).map((t) => t.trim()) : [];
+                  const cleanLoc = item.location ? stripEmoji(item.location) : '';
+
                   return (
                     <div
                       key={item.rowIndex}
-                      className={`group flex items-start justify-between px-2 py-1.5 rounded-xl transition-all hover:bg-slate-50 ${
+                      className={`group flex items-start justify-between px-2 py-1.5 rounded-xl transition-all hover:bg-slate-100/70 ${
                         item.isPacked ? 'opacity-40' : ''
                       }`}
                     >
@@ -218,7 +224,7 @@ export const PackingTab: React.FC<PackingTabProps> = ({
                               {item.item}
                             </span>
 
-                            {/* Person Badges */}
+                            {/* Person Badges (Hidden when filtering by person) */}
                             {selectedPerson === '全部' &&
                               pTokens.map((p) => {
                                 if (!p) return null;
@@ -237,10 +243,10 @@ export const PackingTab: React.FC<PackingTabProps> = ({
                                 );
                               })}
 
-                            {/* Location Badge */}
-                            {item.location && (
-                              <span className="inline-flex items-center bg-slate-100 text-slate-600 border border-slate-200/60 px-1.5 py-0.5 rounded text-[10px] font-extrabold ml-1">
-                                {item.location}
+                            {/* Location Badge (Clean text only, hidden when filtering by location) */}
+                            {selectedLocation === '全部' && cleanLoc && (
+                              <span className="inline-flex items-center bg-slate-100/80 text-slate-500 border border-slate-200/50 px-1.5 py-0.5 rounded text-[10px] font-bold ml-1">
+                                {cleanLoc}
                               </span>
                             )}
                           </div>
@@ -273,4 +279,5 @@ export const PackingTab: React.FC<PackingTabProps> = ({
     </div>
   );
 };
+
 
