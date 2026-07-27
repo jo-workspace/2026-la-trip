@@ -77,13 +77,15 @@ export const PackingTab: React.FC<PackingTabProps> = ({
     return a.localeCompare(b, 'zh-Hant');
   })];
 
+  const hasMultiplePersons = personSet.size > 1;
+
   // Group items by category after filters
   const groupedByCategory: Record<string, PackingItem[]> = {};
   data.forEach((item) => {
     if (hidePacked && item.isPacked) return;
 
     // Person filter
-    if (selectedPerson !== '全部') {
+    if (hasMultiplePersons && selectedPerson !== '全部') {
       const pTokens = item.person ? item.person.split(/[\n,，]+/).map((t) => t.trim()) : [];
       if (!pTokens.includes(selectedPerson)) return;
     }
@@ -109,32 +111,34 @@ export const PackingTab: React.FC<PackingTabProps> = ({
       <div className="bg-slate-50/70 p-2.5 rounded-2xl border border-slate-100/80 flex items-center justify-between gap-3 flex-wrap">
         {/* Person & Location Filter Chips (Wrap naturally on mobile, no horizontal scroll) */}
         <div className="flex items-center gap-3 flex-wrap flex-1 min-w-0">
-          {/* Person Filter */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <User className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-            <div className="flex items-center gap-1 flex-wrap">
-              {personList.map((person) => {
-                const isSelected = selectedPerson === person;
-                return (
-                  <button
-                    key={person}
-                    onClick={() => setSelectedPerson(person)}
-                    className={`px-2.5 py-1 text-xs font-extrabold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
-                      isSelected
-                        ? 'bg-slate-900 text-white shadow-2xs'
-                        : 'bg-white/80 text-slate-600 border border-slate-200/50 hover:bg-slate-100'
-                    }`}
-                  >
-                    {person}
-                  </button>
-                );
-              })}
+          {/* Person Filter (Only shown when multiple persons exist) */}
+          {hasMultiplePersons && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <User className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+              <div className="flex items-center gap-1 flex-wrap">
+                {personList.map((person) => {
+                  const isSelected = selectedPerson === person;
+                  return (
+                    <button
+                      key={person}
+                      onClick={() => setSelectedPerson(person)}
+                      className={`px-2.5 py-1 text-xs font-extrabold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+                        isSelected
+                          ? 'bg-slate-900 text-white shadow-2xs'
+                          : 'bg-white/80 text-slate-600 border border-slate-200/50 hover:bg-slate-100'
+                      }`}
+                    >
+                      {person}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Location Filter */}
           {locationList.length > 1 && (
-            <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200/80 flex-wrap">
+            <div className={`flex items-center gap-1.5 flex-wrap ${hasMultiplePersons ? 'pl-2 border-l border-slate-200/80' : ''}`}>
               <Briefcase className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
               <div className="flex items-center gap-1 flex-wrap">
                 {locationList.map((loc) => {
@@ -242,8 +246,8 @@ export const PackingTab: React.FC<PackingTabProps> = ({
                               {item.item}
                             </span>
 
-                            {/* Person Badges (Hidden when filtering by person) */}
-                            {selectedPerson === '全部' &&
+                            {/* Person Badges (Only shown when multiple persons exist & viewing "全部") */}
+                            {hasMultiplePersons && selectedPerson === '全部' &&
                               pTokens.map((p) => {
                                 if (!p) return null;
                                 let colorClass = 'bg-slate-100 text-slate-600';

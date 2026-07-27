@@ -31,13 +31,13 @@ export const PackingModal: React.FC<PackingModalProps> = ({
   useEffect(() => {
     if (item) {
       setCategory(item.category || '衣物');
-      setPerson(item.person || 'Jo');
+      setPerson(item.person || '');
       setItemName(item.item || '');
       setNote(item.note || '');
       setLocation(item.location || '');
     } else {
       setCategory('衣物');
-      setPerson('Jo');
+      setPerson('');
       setItemName('');
       setNote('');
       setLocation('');
@@ -115,13 +115,12 @@ export const PackingModal: React.FC<PackingModalProps> = ({
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-500 mb-1">攜帶人員</label>
+              <label className="block text-xs font-bold text-slate-500 mb-1">攜帶人員 (選填)</label>
               <input
                 type="text"
                 value={person}
                 onChange={(e) => setPerson(e.target.value)}
                 placeholder="如 Jo, Will, 公用"
-                required
                 className="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold"
               />
             </div>
