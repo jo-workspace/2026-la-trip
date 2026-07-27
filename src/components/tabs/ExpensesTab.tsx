@@ -95,7 +95,6 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
     if (s && !EXCLUDED_KEYWORDS.includes(s)) companionSet.add(s);
   });
   const members = Array.from(companionSet).length > 0 ? Array.from(companionSet) : ['Jo', 'Will'];
-  const paidByOptions = [...members, '公用'];
 
   // Form states
   const [item, setItem] = useState('');
@@ -114,7 +113,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
 
   // 當同行人員改變時，若目前選擇的付款人不符，重置為第一個
   useEffect(() => {
-    if (!paidByOptions.includes(paidBy)) {
+    if (!members.includes(paidBy)) {
       setPaidBy(members[0] || 'Jo');
     }
   }, [companions]);
@@ -396,7 +395,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
               <div>
                 <label className="block text-slate-400 text-[10px] uppercase mb-1">付款人</label>
                 <div className="flex items-center space-x-1 bg-slate-800 p-1 rounded-xl overflow-x-auto no-scrollbar">
-                  {paidByOptions.map((m) => (
+                  {members.map((m) => (
                     <button
                       key={m}
                       type="button"
