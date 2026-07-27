@@ -12,7 +12,7 @@ interface PackingModalProps {
   onDelete: (rowIndex: number) => Promise<void>;
 }
 
-const LOCATION_PRESETS = ['🎒 隨身包', '🧳 托運行李', '💼 手提行李', '🧥 穿身上'];
+const LOCATION_PRESETS = ['🎒 隨身', '🧳 托運', '💼 手提', '🧥 穿著'];
 
 export const PackingModal: React.FC<PackingModalProps> = ({
   isOpen,
@@ -142,7 +142,6 @@ export const PackingModal: React.FC<PackingModalProps> = ({
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="block text-xs font-bold text-slate-500">擺放位置</label>
-              <span className="text-[10px] text-slate-400 font-medium">如：隨身包、托運行李</span>
             </div>
             <input
               type="text"
