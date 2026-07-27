@@ -9,3 +9,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - 當未來專案有需要擴充、修改後端邏輯，或複製建立新旅遊專案時：
   - **優先採用方案**：使用 **Next.js API Routes (`app/api/...`) + 官方 `@googleapis/sheets` 庫**，搭配 Google Service Account 與環境變數 (`GOOGLE_SHEET_ID`, `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_PRIVATE_KEY`)。
   - **避免維護**：避免新增或重新部署 Google Apps Script (`.gs`) Web App 腳本，以達成零 `.gs` 部署、完全由 Next.js + Vercel 環境變數管理之架構。
+
+## Git 工作流規範 (Git Workflow Guidance)
+
+- 每次完成程式碼修改與驗證後，務必自動執行 `git add`、`git commit` 與 `git push` 將最新程式碼變更推送到遠端 GitHub 倉庫。
+
