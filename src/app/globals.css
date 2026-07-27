@@ -38,6 +38,16 @@ body {
   -webkit-touch-callout: none;
 }
 
+/* 電腦版 (768px+) 開放文字選取與複製，手機版維持不可選取以優化觸控體驗 */
+@media (min-width: 768px) {
+  body {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
+}
+
 input, textarea, [contenteditable="true"] {
   -webkit-user-select: text;
   -moz-user-select: text;
