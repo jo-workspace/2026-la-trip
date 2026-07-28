@@ -168,7 +168,7 @@ export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promi
       forWhom: row.for_whom || row['For Whom'] || row.For_Whom || row.forWhom || '自己',
       item: row.item_name || row.item || row.Item || '',
       quantity: row.quantity || row.Quantity || '1',
-      price: Number(row.price ?? row.Price ?? 0),
+      price: Number(row.estimated_price ?? row.Estimated_Price ?? row['Estimated Price'] ?? 0),
       image: row.image || row.Image || '',
       note: row.note || row.Note || '',
       // 完成狀態：對應 bought / Done / is_done
@@ -556,7 +556,7 @@ export async function saveShoppingData(formData: any, tripId = 'la-2026'): Promi
     forWhom: [forWhom || '自己', 'for_whom', 'For Whom', 'For_Whom', 'forWhom'],
     item: [item || '購物品', 'item_name', 'item', 'Item'],
     quantity: [quantity || '1', 'quantity', 'Quantity'],
-    price: [Number(price) || 0, 'price', 'Price'],
+    price: [Number(price) || 0, 'estimated_price', 'Estimated_Price', 'Estimated Price'],
     image: [image || '', 'image', 'Image'],
     note: [note || '', 'note', 'Note'],
   };
