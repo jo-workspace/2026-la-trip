@@ -3,6 +3,7 @@
 import React from 'react';
 import { TodoItem } from '@/types/trip';
 import { compareTodoCategories } from '@/lib/todoCategories';
+import { linkifyText } from '@/lib/linkify';
 import { Plus, Edit3 } from 'lucide-react';
 
 interface TodoTabProps {
@@ -89,7 +90,7 @@ export const TodoTab: React.FC<TodoTabProps> = ({
                   </h3>
                   {item.note && (
                     <div className="text-sm text-slate-500 font-medium mt-1.5 leading-relaxed whitespace-pre-line">
-                      {item.note.replace(/<br\s*\/?>/gi, '\n')}
+                      {linkifyText(item.note.replace(/<br\s*\/?>/gi, '\n'))}
                     </div>
                   )}
                 </div>
