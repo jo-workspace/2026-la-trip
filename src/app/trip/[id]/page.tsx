@@ -407,6 +407,7 @@ export default function TripPage({ params }: PageProps) {
               {currentTab === 'expenses' && (
                 <ExpensesTab
                   data={tripData.expenses}
+                  shopping={tripData.shopping}
                   fxRate={tripData.fxRate}
                   foreignCurrency={tripData.foreignCurrency || 'USD'}
                   companions={tripData.companions}
@@ -418,6 +419,7 @@ export default function TripPage({ params }: PageProps) {
               {currentTab === 'shopping' && (
                 <ShoppingTab
                   data={tripData.shopping}
+                  foreignCurrency={tripData.foreignCurrency || 'USD'}
                   hideDone={hideVisited}
                   onToggleShopping={handleToggleShopping}
                   onOpenModal={(item) => {

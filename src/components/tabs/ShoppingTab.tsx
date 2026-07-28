@@ -6,6 +6,7 @@ import { Plus, Edit3, Link as LinkIcon } from 'lucide-react';
 
 interface ShoppingTabProps {
   data: ShoppingItem[];
+  foreignCurrency?: string;
   hideDone: boolean;
   onToggleShopping: (rowIndex: number, currentStatus: boolean) => void;
   onOpenModal: (item?: ShoppingItem) => void;
@@ -14,6 +15,7 @@ interface ShoppingTabProps {
 
 export const ShoppingTab: React.FC<ShoppingTabProps> = ({
   data,
+  foreignCurrency = 'USD',
   hideDone,
   onToggleShopping,
   onOpenModal,
@@ -42,8 +44,22 @@ export const ShoppingTab: React.FC<ShoppingTabProps> = ({
     return true;
   });
 
+  const plannedTotal = data.reduce((total, item) => total + (item.price || 0), 0);
+  const purchasedTotal = data.reduce((total, item) => total + (item.isDone ? item.price || 0 : 0), 0);
+
   return (
     <div className="space-y-4 pb-20">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-white border border-slate-100 rounded-2xl p-3 shadow-2xs">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">購物預估</p>
+          <p className="mt-1 text-base font-black font-mono text-slate-900">{plannedTotal.toLocaleString()} {foreignCurrency}</p>
+        </div>
+        <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-3 shadow-2xs">
+          <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">已購金額</p>
+          <p className="mt-1 text-base font-black font-mono text-emerald-700">{purchasedTotal.toLocaleString()} {foreignCurrency}</p>
+        </div>
+      </div>
+
       {/* Store Filter Bar and Add Button */}
       <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar py-1">
         <div className="flex items-center space-x-1.5 overflow-x-auto no-scrollbar">
@@ -159,6 +175,12 @@ export const ShoppingTab: React.FC<ShoppingTabProps> = ({
                       {item.quantity && item.quantity !== '1' && (
                         <span className="text-xs font-extrabold text-slate-800 bg-slate-100 border border-slate-200/50 px-1.5 py-0.5 rounded font-mono">
                           ×{item.quantity}
+                        </span>
+                      )}
+
+                      {item.price !== undefined && item.price > 0 && (
+                        <span className="text-xs font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded font-mono">
+                          {item.price.toLocaleString()} {foreignCurrency}
                         </span>
                       )}
 

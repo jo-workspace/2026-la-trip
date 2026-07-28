@@ -23,6 +23,7 @@ export const ShoppingModal: React.FC<ShoppingModalProps> = ({
   const [forWhom, setForWhom] = useState('Jo');
   const [itemName, setItemName] = useState('');
   const [quantity, setQuantity] = useState('1');
+  const [price, setPrice] = useState('');
   const [image, setImage] = useState('');
   const [url, setUrl] = useState('');
   const [note, setNote] = useState('');
@@ -34,6 +35,7 @@ export const ShoppingModal: React.FC<ShoppingModalProps> = ({
       setForWhom(item.forWhom || 'Jo');
       setItemName(item.item || '');
       setQuantity(item.quantity || '1');
+      setPrice(item.price ? String(item.price) : '');
       setImage(item.image || '');
       setUrl(item.url || '');
       setNote(item.note || '');
@@ -42,6 +44,7 @@ export const ShoppingModal: React.FC<ShoppingModalProps> = ({
       setForWhom('Jo');
       setItemName('');
       setQuantity('1');
+      setPrice('');
       setImage('');
       setUrl('');
       setNote('');
@@ -62,6 +65,7 @@ export const ShoppingModal: React.FC<ShoppingModalProps> = ({
         forWhom: forWhom.trim(),
         item: itemName.trim(),
         quantity: quantity.trim(),
+        price: price.trim(),
         image: image.trim(),
         url: url.trim(),
         note: note.trim(),
@@ -131,6 +135,19 @@ export const ShoppingModal: React.FC<ShoppingModalProps> = ({
                 className="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1">價格</label>
+            <input
+              type="number"
+              min="0"
+              step="any"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              placeholder="例如 19.99"
+              className="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold"
+            />
           </div>
 
           <div className="grid grid-cols-3 gap-3">

@@ -46,6 +46,7 @@ export interface ShoppingItem {
   forWhom: string;
   item: string;
   quantity?: string;
+  price?: number;
   image?: string;
   url?: string;
   note?: string;

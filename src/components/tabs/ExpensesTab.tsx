@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ExpenseItem } from '@/types/trip';
+import { ExpenseItem, ShoppingItem } from '@/types/trip';
 import { Plus, Trash2, Banknote, DollarSign, Users } from 'lucide-react';
 
 interface ExpensesTabProps {
   data: ExpenseItem[];
+  shopping: ShoppingItem[];
   fxRate: number;
   foreignCurrency?: string;
   companions?: string;
@@ -66,6 +67,7 @@ export function formatFxRateLabel(fxRate: number, foreignCurrencyCode: string): 
 
 export const ExpensesTab: React.FC<ExpensesTabProps> = ({
   data,
+  shopping,
   fxRate = 32.5,
   foreignCurrency = 'USD',
   companions = 'Jo, Will',
@@ -74,6 +76,14 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
 }) => {
   const activeForeignCode = (foreignCurrency || 'USD').toUpperCase();
   const fxLabel = formatFxRateLabel(fxRate, activeForeignCode);
+  const shoppingPlannedTwd = shopping.reduce(
+    (total, item) => total + computeTwdAmount(item.price || 0, activeForeignCode, fxRate, activeForeignCode),
+    0,
+  );
+  const shoppingPurchasedTwd = shopping.reduce(
+    (total, item) => total + (item.isDone ? computeTwdAmount(item.price || 0, activeForeignCode, fxRate, activeForeignCode) : 0),
+    0,
+  );
 
   // 解析同行人員清單（排除公用與分帳關鍵字）
   const companionSet = new Set<string>();
@@ -317,6 +327,17 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
                 </div>
               );
             })}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="bg-white border border-slate-100 p-3 rounded-2xl shadow-2xs">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">購物預估</span>
+              <span className="text-sm font-mono font-black text-slate-900 mt-0.5 block">${Math.round(shoppingPlannedTwd).toLocaleString()} TWD</span>
+            </div>
+            <div className="bg-emerald-50 border border-emerald-100 p-3 rounded-2xl shadow-2xs">
+              <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block">已購金額</span>
+              <span className="text-sm font-mono font-black text-emerald-700 mt-0.5 block">${Math.round(shoppingPurchasedTwd).toLocaleString()} TWD</span>
+            </div>
           </div>
 
           {/* Quick Expense Form */}
