@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { TodoItem } from '@/types/trip';
+import { TODO_CATEGORY_PRESETS } from '@/lib/todoCategories';
 import { X, Trash2 } from 'lucide-react';
 
 interface TodoModalProps {
@@ -19,18 +20,18 @@ export const TodoModal: React.FC<TodoModalProps> = ({
   onSave,
   onDelete,
 }) => {
-  const [category, setCategory] = useState('Phase 4: Pre-Travel');
+  const [category, setCategory] = useState('');
   const [task, setTask] = useState('');
   const [note, setNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (item) {
-      setCategory(item.category || 'Phase 4: Pre-Travel');
+      setCategory(item.category || '');
       setTask(item.task || '');
       setNote(item.note || '');
     } else {
-      setCategory('Phase 4: Pre-Travel');
+      setCategory('');
       setTask('');
       setNote('');
     }
@@ -93,18 +94,31 @@ export const TodoModal: React.FC<TodoModalProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-3.5">
           <div>
-            <label className="block text-xs font-bold text-slate-500 mb-1">分類</label>
-            <select
+            <label className="block text-xs font-bold text-slate-500 mb-1">分類 (選填)</label>
+            <input
+              type="text"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold"
-            >
-              <option value="Phase 1: 即刻">Phase 1: 即刻</option>
-              <option value="Phase 2: 旅宿交通">Phase 2: 旅宿交通</option>
-              <option value="Phase 3: 7 月">Phase 3: 7 月</option>
-              <option value="Phase 4: Pre-Travel">Phase 4: Pre-Travel</option>
-              <option value="其他">備忘</option>
-            </select>
+              placeholder="如 證件保險、機票住宿（留空歸類為其他）"
+              className="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-semibold mb-2"
+            />
+            {/* Quick Presets */}
+            <div className="flex items-center flex-wrap gap-1.5">
+              {TODO_CATEGORY_PRESETS.map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setCategory(preset)}
+                  className={`text-xs px-2.5 py-1 rounded-lg border transition-all cursor-pointer select-none font-bold ${
+                    category === preset
+                      ? 'bg-slate-900 text-white border-slate-900'
+                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div>

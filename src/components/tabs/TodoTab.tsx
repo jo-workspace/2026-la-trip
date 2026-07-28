@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { TodoItem } from '@/types/trip';
+import { compareTodoCategories } from '@/lib/todoCategories';
 import { Plus, Edit3 } from 'lucide-react';
 
 interface TodoTabProps {
@@ -17,11 +18,12 @@ export const TodoTab: React.FC<TodoTabProps> = ({
   onToggleTodo,
   onOpenModal,
 }) => {
-  // Sort by category first, then by rowIndex
+  // Sort by category (fixed priority order), then by rowIndex
   const sortedData = [...data].sort((a, b) => {
     const catA = a.category || '其他';
     const catB = b.category || '其他';
-    if (catA !== catB) return catA.localeCompare(catB, 'zh-Hant');
+    const catCompare = compareTodoCategories(catA, catB);
+    if (catCompare !== 0) return catCompare;
     return a.rowIndex - b.rowIndex;
   });
 
