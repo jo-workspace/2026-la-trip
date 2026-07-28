@@ -66,6 +66,7 @@ export const ShoppingModal: React.FC<ShoppingModalProps> = ({
         item: itemName.trim(),
         quantity: quantity.trim(),
         price: price.trim(),
+        purchaseStatus: item?.purchaseStatus || (item?.isDone ? 'purchased' : 'pending'),
         image: image.trim(),
         url: url.trim(),
         note: note.trim(),

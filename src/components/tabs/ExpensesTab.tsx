@@ -80,8 +80,10 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
     (total, item) => total + computeTwdAmount(item.price || 0, activeForeignCode, fxRate, activeForeignCode),
     0,
   );
-  const shoppingPurchasedTwd = shopping.reduce(
-    (total, item) => total + (item.isDone ? computeTwdAmount(item.price || 0, activeForeignCode, fxRate, activeForeignCode) : 0),
+  const shoppingActualTwd = data.reduce(
+    (total, expense) => total + (expense.category === '🛒'
+      ? computeTwdAmount(expense.amount || 0, expense.currency, fxRate, activeForeignCode)
+      : 0),
     0,
   );
 
@@ -335,8 +337,8 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
               <span className="text-sm font-mono font-black text-slate-900 mt-0.5 block">${Math.round(shoppingPlannedTwd).toLocaleString()} TWD</span>
             </div>
             <div className="bg-emerald-50 border border-emerald-100 p-3 rounded-2xl shadow-2xs">
-              <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block">已購金額</span>
-              <span className="text-sm font-mono font-black text-emerald-700 mt-0.5 block">${Math.round(shoppingPurchasedTwd).toLocaleString()} TWD</span>
+              <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block">實際已購</span>
+              <span className="text-sm font-mono font-black text-emerald-700 mt-0.5 block">${Math.round(shoppingActualTwd).toLocaleString()} TWD</span>
             </div>
           </div>
 

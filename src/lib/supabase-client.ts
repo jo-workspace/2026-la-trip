@@ -169,6 +169,7 @@ export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promi
       item: row.item_name || row.item || row.Item || '',
       quantity: row.quantity || row.Quantity || '1',
       price: Number(row.estimated_price ?? row.Estimated_Price ?? row['Estimated Price'] ?? 0),
+      purchaseStatus: row.purchase_status || row.Purchase_Status || (row.bought ?? row.Done ?? row.Is_Done ?? row.is_done ? 'purchased' : 'pending'),
       image: row.image || row.Image || '',
       note: row.note || row.Note || '',
       // 完成狀態：對應 bought / Done / is_done
@@ -540,7 +541,7 @@ export async function deleteExpenseData(rowIndex: number, tripId = 'la-2026'): P
 
 /** 購物清單 */
 export async function saveShoppingData(formData: any, tripId = 'la-2026'): Promise<string> {
-  const { rowIndex, item, store, forWhom, quantity, price, note, image } = formData;
+  const { rowIndex, item, store, forWhom, quantity, price, purchaseStatus, note, image } = formData;
 
   const { data: list } = await supabase
     .from('shopping_items')
@@ -557,6 +558,7 @@ export async function saveShoppingData(formData: any, tripId = 'la-2026'): Promi
     item: [item || '購物品', 'item_name', 'item', 'Item'],
     quantity: [quantity || '1', 'quantity', 'Quantity'],
     price: [Number(price) || 0, 'estimated_price', 'Estimated_Price', 'Estimated Price'],
+    purchaseStatus: [purchaseStatus || 'pending', 'purchase_status', 'Purchase_Status'],
     image: [image || '', 'image', 'Image'],
     note: [note || '', 'note', 'Note'],
   };
@@ -588,9 +590,59 @@ export async function toggleShoppingStatus(rowIndex: number, isChecked: boolean,
   if (data && data[rowIndex - 2]) {
     const row = data[rowIndex - 2];
     const key = Object.keys(row).find((k) => ['bought', 'is_done', 'Is_Done', 'Done'].includes(k)) || 'bought';
-    await supabase.from('shopping_items').update({ [key]: isChecked }).eq('id', row.id);
+    await supabase.from('shopping_items').update({ [key]: isChecked, purchase_status: isChecked ? 'purchased' : 'pending' }).eq('id', row.id);
   }
   return '已更新';
+}
+
+export async function checkoutShoppingStore(
+  {
+    store,
+    amount,
+    currency,
+    purchasedRowIndexes,
+    outOfStockRowIndexes,
+  }: {
+    store: string;
+    amount: number;
+    currency: string;
+    purchasedRowIndexes: number[];
+    outOfStockRowIndexes: number[];
+  },
+  tripId = 'la-2026',
+): Promise<void> {
+  await addExpenseData({
+    category: '🛒',
+    item: `購物：${store}`,
+    amount,
+    currency,
+    paidBy: 'Jo',
+    split: 'Jo',
+    note: '由購物清單結帳建立',
+  }, tripId);
+
+  const { data: items, error } = await supabase
+    .from('shopping_items')
+    .select('*')
+    .eq('trip_id', tripId)
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(`讀取購物清單失敗: ${error.message}`);
+
+  const boughtKey = items?.[0] && Object.keys(items[0]).find((key) => ['bought', 'is_done', 'Is_Done', 'Done'].includes(key)) || 'bought';
+  const updateItem = async (rowIndex: number, purchaseStatus: 'purchased' | 'out_of_stock') => {
+    const item = items?.[rowIndex - 2];
+    if (!item) return;
+    const { error: updateError } = await supabase
+      .from('shopping_items')
+      .update({ [boughtKey]: purchaseStatus === 'purchased', purchase_status: purchaseStatus })
+      .eq('id', item.id);
+    if (updateError) throw new Error(`更新購物品項失敗: ${updateError.message}`);
+  };
+
+  await Promise.all([
+    ...purchasedRowIndexes.map((rowIndex) => updateItem(rowIndex, 'purchased')),
+    ...outOfStockRowIndexes.map((rowIndex) => updateItem(rowIndex, 'out_of_stock')),
+  ]);
 }
 
 // 保持與舊介面極相容的函數名稱

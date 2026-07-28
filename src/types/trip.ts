@@ -47,6 +47,7 @@ export interface ShoppingItem {
   item: string;
   quantity?: string;
   price?: number;
+  purchaseStatus?: 'pending' | 'purchased' | 'out_of_stock';
   image?: string;
   url?: string;
   note?: string;

@@ -18,6 +18,7 @@ import { ItineraryModal } from '@/components/modals/ItineraryModal';
 import { TodoModal } from '@/components/modals/TodoModal';
 import { PackingModal } from '@/components/modals/PackingModal';
 import { ShoppingModal } from '@/components/modals/ShoppingModal';
+import { ShoppingCheckoutModal } from '@/components/modals/ShoppingCheckoutModal';
 import { SettingsModal } from '@/components/modals/SettingsModal';
 import { LightboxModal } from '@/components/modals/LightboxModal';
 
@@ -37,6 +38,7 @@ import {
   saveShoppingData,
   deleteShoppingData,
   toggleShoppingStatus,
+  checkoutShoppingStore,
 } from '@/lib/supabase-client';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
@@ -101,6 +103,8 @@ export default function TripPage({ params }: PageProps) {
 
   const [shoppingModalOpen, setShoppingModalOpen] = useState(false);
   const [activeShoppingItem, setActiveShoppingItem] = useState<ShoppingItem | null>(null);
+  const [checkoutStore, setCheckoutStore] = useState<string | null>(null);
+  const [checkoutItems, setCheckoutItems] = useState<ShoppingItem[]>([]);
 
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
@@ -287,7 +291,7 @@ export default function TripPage({ params }: PageProps) {
     setTripData((prev) => ({
       ...prev,
       shopping: prev.shopping.map((s) =>
-        s.rowIndex === rowIndex ? { ...s, isDone: nextStatus } : s
+        s.rowIndex === rowIndex ? { ...s, isDone: nextStatus, purchaseStatus: nextStatus ? 'purchased' : 'pending' } : s
       ),
     }));
 
@@ -318,6 +322,23 @@ export default function TripPage({ params }: PageProps) {
       fetchData(true);
     } catch (err: any) {
       showToast(`刪除失敗: ${err.message}`);
+    }
+  };
+
+  const handleCheckoutShoppingStore = async (data: {
+    store: string;
+    amount: number;
+    purchasedRowIndexes: number[];
+    outOfStockRowIndexes: number[];
+  }) => {
+    try {
+      showToast('正在記錄購物結帳…');
+      await checkoutShoppingStore({ ...data, currency: tripData.foreignCurrency || 'USD' }, tripId);
+      showToast('結帳已加入記帳頁');
+      await fetchData(true);
+    } catch (err: any) {
+      showToast(`結帳儲存失敗：${err.message}`);
+      throw err;
     }
   };
 
@@ -427,6 +448,10 @@ export default function TripPage({ params }: PageProps) {
                     setShoppingModalOpen(true);
                   }}
                   onOpenLightbox={(img) => setLightboxUrl(img)}
+                  onCheckoutStore={(store, items) => {
+                    setCheckoutStore(store);
+                    setCheckoutItems(items);
+                  }}
                 />
               )}
             </>
@@ -469,6 +494,17 @@ export default function TripPage({ params }: PageProps) {
         onSave={handleSaveShopping}
         onDelete={handleDeleteShopping}
       />
+
+      {checkoutStore && (
+        <ShoppingCheckoutModal
+          isOpen
+          store={checkoutStore}
+          items={checkoutItems}
+          currency={tripData.foreignCurrency || 'USD'}
+          onClose={() => setCheckoutStore(null)}
+          onConfirm={handleCheckoutShoppingStore}
+        />
+      )}
 
       <SettingsModal
         isOpen={settingsModalOpen}
