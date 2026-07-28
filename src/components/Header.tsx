@@ -1,13 +1,14 @@
 'use client';
 
 import React from 'react';
-import { RefreshCw, Settings, Eye, EyeOff, Plane } from 'lucide-react';
+import { RefreshCw, Settings, Eye, EyeOff, Plane, Share2 } from 'lucide-react';
 
 interface HeaderProps {
   hideVisited: boolean;
   onToggleHideVisited: () => void;
   onRefresh: () => void;
   onOpenSettings: () => void;
+  onShare?: () => void;
   isLoading?: boolean;
   tripTitle?: string;
 }
@@ -17,6 +18,7 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleHideVisited,
   onRefresh,
   onOpenSettings,
+  onShare,
   isLoading = false,
   tripTitle = '旅程總覽',
 }) => {
@@ -53,6 +55,17 @@ export const Header: React.FC<HeaderProps> = ({
           >
             {hideVisited ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
+
+          {/* Share Button */}
+          {onShare && (
+            <button
+              onClick={onShare}
+              className="p-2 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-all duration-200 active:scale-95 flex items-center justify-center cursor-pointer"
+              title="複製此頁面連結分享給旅伴"
+            >
+              <Share2 className="w-4 h-4" />
+            </button>
+          )}
 
           {/* Refresh Button */}
           <button

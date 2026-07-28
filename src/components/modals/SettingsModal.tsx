@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Settings2, Calendar, DollarSign, FileText, Globe } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { X, Settings2, Calendar, DollarSign, FileText, Globe, LogOut } from 'lucide-react';
 import { updateTripSettings } from '@/lib/supabase-client';
 
 interface SettingsModalProps {
@@ -43,6 +44,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [people, setPeople] = useState('Jo, Will');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await fetch('/api/logout', { method: 'POST' });
+    router.push('/login');
+    router.refresh();
+  };
 
   // 每次開啟時重新載入目前值
   useEffect(() => {
@@ -272,7 +280,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end space-x-2 px-6 py-4 border-t border-slate-100 bg-slate-50/60">
+          <div className="flex items-center justify-between space-x-2 px-6 py-4 border-t border-slate-100 bg-slate-50/60">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex items-center space-x-1.5 px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>登出</span>
+            </button>
+            <div className="flex items-center space-x-2">
             <button
               type="button"
               onClick={onClose}
@@ -287,6 +304,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             >
               {isSaving ? '儲存中…' : '儲存設定'}
             </button>
+            </div>
           </div>
         </form>
       </div>

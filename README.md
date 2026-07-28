@@ -20,6 +20,19 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
+## 密碼保護 (Passcode Protection)
+
+整站可設定一組共用通行碼，未輸入正確密碼無法瀏覽任何頁面（透過 `src/proxy.ts` 攔截）。
+
+- 本地開發：於 `.env.local` 設定 `APP_PASSWORD=你的通行碼`。未設定時本地端不會啟用密碼保護。
+- 正式環境 (Vercel)：於 Project Settings → Environment Variables 新增 `APP_PASSWORD`，之後重新部署。
+- 忘記密碼或想換碼：直接更新 `APP_PASSWORD` 的值即可，舊的登入 cookie 會因簽章不符自動失效。
+- 登出：在任一旅程頁「旅程設定」的左下角有「登出」按鈕。
+
+## 分享特定頁面 (Deep Link)
+
+切換分頁時網址列會自動帶上 `?tab=`（例如 `/trip/la-2026?tab=shopping`），也可以按 Header 上的分享圖示一鍵複製目前頁面連結給旅伴。旅伴打開連結時，若尚未登入仍會先看到通行碼頁面，登入後會直接導向該分頁。
+
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More

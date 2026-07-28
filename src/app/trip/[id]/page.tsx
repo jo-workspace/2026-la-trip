@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, use } from 'react';
-import { notFound } from 'next/navigation';
+import { notFound, useRouter, useSearchParams } from 'next/navigation';
 import { TRIPS, TripConfig } from '@/config/trips';
 import { AllTripData, ItineraryItem, TodoItem, PackingItem, ShoppingItem } from '@/types/trip';
 import { TabType, Sidebar } from '@/components/Sidebar';
@@ -47,9 +47,14 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+const VALID_TABS: TabType[] = ['itinerary', 'todo', 'packing', 'expenses', 'shopping'];
+
 export default function TripPage({ params }: PageProps) {
   const resolvedParams = use(params);
   const tripId = resolvedParams.id;
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tabFromUrl = searchParams.get('tab');
   const rawConfig: TripConfig | undefined = TRIPS[tripId];
   const tripConfig: TripConfig = rawConfig || {
     id: tripId,
@@ -62,6 +67,9 @@ export default function TripPage({ params }: PageProps) {
   };
 
   const [currentTab, setCurrentTab] = useState<TabType>(() => {
+    if (tabFromUrl && VALID_TABS.includes(tabFromUrl as TabType)) {
+      return tabFromUrl as TabType;
+    }
     if (typeof window !== 'undefined') {
       return (localStorage.getItem(`activeTab_${tripId}`) as TabType) || 'itinerary';
     }
@@ -71,6 +79,17 @@ export default function TripPage({ params }: PageProps) {
   const handleTabChange = (tab: TabType) => {
     setCurrentTab(tab);
     localStorage.setItem(`activeTab_${tripId}`, tab);
+    router.replace(`/trip/${tripId}?tab=${tab}`, { scroll: false });
+  };
+
+  const handleShare = async () => {
+    const url = `${window.location.origin}/trip/${tripId}?tab=${currentTab}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast('連結已複製，分享給旅伴吧！');
+    } catch {
+      showToast(`複製失敗，請手動複製：${url}`);
+    }
   };
   const [hideVisited, setHideVisited] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -361,6 +380,7 @@ export default function TripPage({ params }: PageProps) {
           onToggleHideVisited={() => setHideVisited(!hideVisited)}
           onRefresh={() => fetchData(true)}
           onOpenSettings={() => setSettingsModalOpen(true)}
+          onShare={handleShare}
           isLoading={isLoading}
           tripTitle={tripData.tripTitle || tripConfig.title}
         />
