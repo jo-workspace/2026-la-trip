@@ -2,11 +2,13 @@
 
 import React, { useState } from 'react';
 import { ShoppingItem } from '@/types/trip';
+import { computeTwdAmount } from '@/components/tabs/ExpensesTab';
 import { Plus, Edit3, Link as LinkIcon } from 'lucide-react';
 
 interface ShoppingTabProps {
   data: ShoppingItem[];
   foreignCurrency?: string;
+  fxRate: number;
   hideDone: boolean;
   onToggleShopping: (rowIndex: number, currentStatus: boolean) => void;
   onOpenModal: (item?: ShoppingItem) => void;
@@ -20,6 +22,7 @@ const splitTokens = (value: string) => value.split(/[\n,、+/]/).map((token) => 
 export const ShoppingTab: React.FC<ShoppingTabProps> = ({
   data,
   foreignCurrency = 'USD',
+  fxRate,
   hideDone,
   onToggleShopping,
   onOpenModal,
@@ -37,6 +40,7 @@ export const ShoppingTab: React.FC<ShoppingTabProps> = ({
     ? []
     : data.filter((item) => splitTokens(item.store).includes(selectedStore) && !item.isDone && item.purchaseStatus !== 'out_of_stock');
   const plannedTotal = data.reduce((total, item) => total + (item.price || 0), 0);
+  const plannedTotalTwd = Math.round(computeTwdAmount(plannedTotal, foreignCurrency, fxRate, foreignCurrency));
   const selectedEstimate = data.reduce((total, item) => total + (item.isDone ? item.price || 0 : 0), 0);
 
   return (
@@ -45,6 +49,7 @@ export const ShoppingTab: React.FC<ShoppingTabProps> = ({
         <div className="bg-white border border-slate-100 rounded-2xl p-3 shadow-2xs">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">購物預估</p>
           <p className="mt-1 text-base font-black font-mono text-slate-900">{plannedTotal.toLocaleString()} {foreignCurrency}</p>
+          <p className="mt-0.5 text-[10px] font-bold font-mono text-slate-400">約 ${plannedTotalTwd.toLocaleString()} TWD</p>
         </div>
         <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-3 shadow-2xs">
           <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">已勾選預估</p>
