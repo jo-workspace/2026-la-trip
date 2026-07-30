@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { AllTripData, ItineraryItem, TodoItem, PackingItem, ExpenseItem, ShoppingItem } from '@/types/trip';
-import { TripConfig } from '@/config/trips';
+import { TripConfig, TRIPS } from '@/config/trips';
 
 // 預設兩趟旅程範例
 const INITIAL_TRIPS: TripConfig[] = [
@@ -12,6 +12,7 @@ const INITIAL_TRIPS: TripConfig[] = [
     badgeText: '進行中',
     apiUrl: 'https://script.google.com/macros/s/AKfycbwuT0HjqVqIpY9fO-zHC9xuG_U6et5AsYE9qkhR8_PqvLG3vTWdxRGERLbeEXzo4iUQ/exec',
     description: '洛杉磯觀光、棒球賽與美食之旅',
+    timezone: 'America/Los_Angeles',
   },
   {
     id: 'okinawa-2026',
@@ -21,6 +22,7 @@ const INITIAL_TRIPS: TripConfig[] = [
     badgeText: '籌備中',
     apiUrl: '',
     description: '沖繩自駕、海景與休閒之旅',
+    timezone: 'Asia/Tokyo',
   },
 ];
 
@@ -188,6 +190,7 @@ export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promi
     const companions = settingsData?.companions || 'Jo, Will';
     const tripTitle = settingsData?.title || tripData?.title || tripId;
     const tripDates = settingsData?.dates || tripData?.dates || '';
+    const timezone = settingsData?.timezone || TRIPS[tripId]?.timezone || 'Asia/Taipei';
 
     return {
       itinerary,
@@ -203,6 +206,7 @@ export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promi
       companions,
       tripTitle,
       tripDates,
+      timezone,
     };
   } catch (err) {
     console.error('getAllData Supabase error:', err);
@@ -220,6 +224,7 @@ export async function getAllData(bypassCache = false, tripId = 'la-2026'): Promi
       companions: 'Jo, Will',
       tripTitle: '',
       tripDates: '',
+      timezone: TRIPS[tripId]?.timezone || 'Asia/Taipei',
     };
   }
 }
@@ -234,6 +239,7 @@ export async function updateTripSettings(
     tripNote?: string;
     foreignCurrency?: string;
     companions?: string;
+    timezone?: string;
     title?: string;
     dates?: string;
   }
@@ -261,6 +267,9 @@ export async function updateTripSettings(
   }
   if (dbKeys.length === 0 || dbKeys.includes('companions')) {
     payload.companions = settings.companions ?? 'Jo, Will';
+  }
+  if (dbKeys.length === 0 || dbKeys.includes('timezone')) {
+    payload.timezone = settings.timezone ?? 'Asia/Taipei';
   }
 
   let settingsError;

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { ItineraryItem } from '@/types/trip';
+import { getTodayDayLabel } from '@/lib/tripDate';
 import { MapPin, ExternalLink, Plus, CheckCircle2, Circle, Edit3 } from 'lucide-react';
 
 interface ItineraryTabProps {
@@ -9,6 +10,7 @@ interface ItineraryTabProps {
   tripNote?: string;
   hideVisited: boolean;
   startDate?: string; // YYYY-MM-DD，旅程起始日
+  timezone?: string; // 旅程目的地時區（IANA），用來判斷「今天」是第幾天
   onToggleVisited: (rowIndex: number, currentStatus: boolean) => void;
   onOpenModal: (item?: ItineraryItem) => void;
   onOpenLightbox: (imageUrl: string) => void;
@@ -44,11 +46,10 @@ export const ItineraryTab: React.FC<ItineraryTabProps> = ({
   tripNote,
   hideVisited,
   startDate,
+  timezone,
   onToggleVisited,
   onOpenModal,
 }) => {
-  const [selectedDay, setSelectedDay] = useState<string>('ALL');
-
   // Extract unique days
   const days = Array.from(new Set(data.map((item) => item.day))).filter(Boolean);
 
@@ -58,6 +59,11 @@ export const ItineraryTab: React.FC<ItineraryTabProps> = ({
     const numB = parseInt(b.replace(/[^0-9]/g, '')) || 999;
     return numA - numB;
   });
+
+  // 旅程進行中就自動定位到今天對應的 Day；尚未開始/已結束則維持全部天數
+  const [selectedDay, setSelectedDay] = useState<string>(
+    () => getTodayDayLabel(startDate || '', timezone || '', days) ?? 'ALL'
+  );
 
   // Filter items
   const filteredItems = data.filter((item) => {
@@ -73,6 +79,12 @@ export const ItineraryTab: React.FC<ItineraryTabProps> = ({
     if (!groupedByDay[dayKey]) groupedByDay[dayKey] = [];
     groupedByDay[dayKey].push(item);
   });
+
+  // 渲染順序依照已排序的 days，而非物件的插入順序；例外 key（如未定日期）排在最後
+  const orderedDayKeys = [
+    ...days.filter((d) => groupedByDay[d]),
+    ...Object.keys(groupedByDay).filter((d) => !days.includes(d)),
+  ];
 
   return (
     <div className="space-y-4 pb-20">
@@ -136,7 +148,8 @@ export const ItineraryTab: React.FC<ItineraryTabProps> = ({
       )}
 
       {/* Itinerary Cards Grouped by Day */}
-      {Object.entries(groupedByDay).map(([day, items]) => {
+      {orderedDayKeys.map((day) => {
+        const items = groupedByDay[day];
         // 優先使用計算出來的日期，其次用資料本身的 date 欄位
         const dateText = startDate
           ? calcDateFromStartDate(startDate, day)

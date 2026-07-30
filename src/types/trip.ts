@@ -68,4 +68,5 @@ export interface AllTripData {
   tripDates?: string;     // 旅程日期顯示（from trips table）
   foreignCurrency?: string; // 外幣代碼，例如 USD / JPY / EUR
   companions?: string;    // 同行人員，例如 Jo, Will, 特特
+  timezone?: string;      // 旅程目的地時區（IANA），例如 America/Los_Angeles
 }

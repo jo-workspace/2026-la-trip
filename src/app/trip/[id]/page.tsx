@@ -412,6 +412,7 @@ export default function TripPage({ params }: PageProps) {
                   tripNote={tripData.tripNote}
                   hideVisited={hideVisited}
                   startDate={tripData.startDate}
+                  timezone={tripData.timezone}
                   onToggleVisited={handleToggleVisited}
                   onOpenModal={(item) => {
                     setActiveItineraryItem(item || null);
@@ -539,6 +540,7 @@ export default function TripPage({ params }: PageProps) {
         budgetTwd={tripData.budgetTwd || 0}
         tripNote={tripData.tripNote}
         foreignCurrency={tripData.foreignCurrency || 'USD'}
+        timezone={tripData.timezone}
         companions={tripData.companions}
       />
 

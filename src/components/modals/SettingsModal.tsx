@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { X, Settings2, Calendar, DollarSign, FileText, Globe, LogOut } from 'lucide-react';
 import { updateTripSettings } from '@/lib/supabase-client';
 
+const TIMEZONE_PRESETS = ['Asia/Taipei', 'America/Los_Angeles', 'Asia/Tokyo', 'America/New_York', 'Europe/London'];
+
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -18,6 +20,7 @@ interface SettingsModalProps {
   tripNote: string;
   foreignCurrency: string;
   companions?: string;
+  timezone?: string;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -33,6 +36,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   tripNote,
   foreignCurrency,
   companions,
+  timezone,
 }) => {
   const [title, setTitle] = useState('');
   const [dates, setDates] = useState('');
@@ -42,6 +46,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [note, setNote] = useState('');
   const [currency, setCurrency] = useState('USD');
   const [people, setPeople] = useState('Jo, Will');
+  const [tz, setTz] = useState('Asia/Taipei');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
@@ -63,9 +68,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setNote(tripNote || '');
       setCurrency(foreignCurrency || 'USD');
       setPeople(companions || 'Jo, Will');
+      setTz(timezone || 'Asia/Taipei');
       setError('');
     }
-  }, [isOpen, tripTitle, tripDates, startDate, fxRate, budgetTwd, tripNote, foreignCurrency, companions]);
+  }, [isOpen, tripTitle, tripDates, startDate, fxRate, budgetTwd, tripNote, foreignCurrency, companions, timezone]);
 
   if (!isOpen) return null;
 
@@ -83,6 +89,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         tripNote: note,
         foreignCurrency: currency.trim().toUpperCase() || 'USD',
         companions: people.trim() || 'Jo, Will',
+        timezone: tz.trim() || 'Asia/Taipei',
       });
       onSaved();
       onClose();
@@ -183,6 +190,36 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   onChange={(e) => setStart(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all"
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1">
+                  目的地時區
+                  <span className="text-slate-400 font-normal ml-1">（用來判斷「今天」對應第幾天，分享連結給人在其他時區的旅伴也不會算錯）</span>
+                </label>
+                <input
+                  type="text"
+                  value={tz}
+                  onChange={(e) => setTz(e.target.value)}
+                  placeholder="例：America/Los_Angeles"
+                  className="w-full bg-slate-50 border border-slate-200 text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all font-mono mb-2"
+                />
+                <div className="flex items-center flex-wrap gap-1.5">
+                  {TIMEZONE_PRESETS.map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setTz(preset)}
+                      className={`text-xs px-2.5 py-1 rounded-lg border transition-all cursor-pointer select-none font-bold ${
+                        tz === preset
+                          ? 'bg-slate-900 text-white border-slate-900'
+                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
