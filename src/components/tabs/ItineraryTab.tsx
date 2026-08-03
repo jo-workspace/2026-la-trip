@@ -41,6 +41,70 @@ function calcDateFromStartDate(startDateStr: string, dayLabel: string): string {
   return `${target.getMonth() + 1}/${target.getDate()} ${weekdays[target.getDay()]}`;
 }
 
+export function parseTimeToMinutes(timeStr?: string): number | null {
+  if (!timeStr) return null;
+  const t = timeStr.trim();
+  if (!t) return null;
+
+  let h: number | null = null;
+  let m = 0;
+
+  const matchColon = t.match(/(\d{1,2})[:：](\d{2})/);
+  if (matchColon) {
+    h = parseInt(matchColon[1], 10);
+    m = parseInt(matchColon[2], 10);
+  } else {
+    const matchHour = t.match(/(\d{1,2})\s*(?:點|点|時|时|h|H)/);
+    if (matchHour) {
+      h = parseInt(matchHour[1], 10);
+      m = 0;
+    }
+  }
+
+  if (h === null || isNaN(h) || isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59) return null;
+
+  const isPM = /pm|下午|晚上|傍晚/i.test(t);
+  const isAM = /am|上午|早上|清晨/i.test(t);
+
+  if (isPM && h < 12) {
+    h += 12;
+  } else if (isAM && h === 12) {
+    h = 0;
+  }
+
+  return h * 60 + m;
+}
+
+export function sortItineraryItems(a: ItineraryItem, b: ItineraryItem): number {
+  const numA = parseInt((a.day || '').replace(/[^0-9]/g, ''), 10) || 999;
+  const numB = parseInt((b.day || '').replace(/[^0-9]/g, ''), 10) || 999;
+  if (numA !== numB) return numA - numB;
+
+  const minA = parseTimeToMinutes(a.time);
+  const minB = parseTimeToMinutes(b.time);
+
+  if (minA !== null && minB !== null) {
+    if (minA !== minB) return minA - minB;
+  } else if (minA !== null && minB === null) {
+    return -1;
+  } else if (minA === null && minB !== null) {
+    return 1;
+  }
+
+  const timeA = (a.time || '').trim();
+  const timeB = (b.time || '').trim();
+  if (timeA && timeB) {
+    const lexCompare = timeA.localeCompare(timeB, 'zh-Hant');
+    if (lexCompare !== 0) return lexCompare;
+  } else if (timeA) {
+    return -1;
+  } else if (timeB) {
+    return 1;
+  }
+
+  return (a.rowIndex || 0) - (b.rowIndex || 0);
+}
+
 export const ItineraryTab: React.FC<ItineraryTabProps> = ({
   data,
   tripNote,
@@ -50,8 +114,11 @@ export const ItineraryTab: React.FC<ItineraryTabProps> = ({
   onToggleVisited,
   onOpenModal,
 }) => {
+  // Sort items by Day and Time
+  const sortedItems = [...data].sort(sortItineraryItems);
+
   // Extract unique days
-  const days = Array.from(new Set(data.map((item) => item.day))).filter(Boolean);
+  const days = Array.from(new Set(sortedItems.map((item) => item.day))).filter(Boolean);
 
   // Sort days logically (Day 1, Day 2...)
   days.sort((a, b) => {
@@ -66,7 +133,7 @@ export const ItineraryTab: React.FC<ItineraryTabProps> = ({
   );
 
   // Filter items
-  const filteredItems = data.filter((item) => {
+  const filteredItems = sortedItems.filter((item) => {
     if (hideVisited && item.isVisited) return false;
     if (selectedDay !== 'ALL' && item.day !== selectedDay) return false;
     return true;
@@ -78,6 +145,11 @@ export const ItineraryTab: React.FC<ItineraryTabProps> = ({
     const dayKey = item.day || '未定日期';
     if (!groupedByDay[dayKey]) groupedByDay[dayKey] = [];
     groupedByDay[dayKey].push(item);
+  });
+
+  // Ensure items within each group are explicitly sorted by time
+  Object.keys(groupedByDay).forEach((dayKey) => {
+    groupedByDay[dayKey].sort(sortItineraryItems);
   });
 
   // 渲染順序依照已排序的 days，而非物件的插入順序；例外 key（如未定日期）排在最後
